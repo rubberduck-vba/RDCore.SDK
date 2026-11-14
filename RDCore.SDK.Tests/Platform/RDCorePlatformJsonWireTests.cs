@@ -43,12 +43,14 @@ public sealed class RDCorePlatformJsonWireTests
             ProjectName = "VBAProject",
             ModuleCount = 3,
             ReferenceCount = 2,
+            FormsLoaded = 1,
             Memory = new SessionMemoryStatus { ReservedBytes = 1, AvailableBytes = 2, AllocatedBytes = 3, FreeBytes = 4, CommittedBytes = 5, LargestFreeBlock = 6 },
         });
         yield return Same(new SessionExecuteParams { Source = "Debug.Print 1", ModuleName = "Module1", EntryPoint = "Main", Debug = true, Immediate = true, SessionModule = true });
         yield return Same(new ExecuteResult
         {
             Outcome = ExecutionOutcome.Suspended,
+            FormsShown = true,
             Output = ["1"],
             StreamedLines = 7,
             Diagnostics = ["RDC00001"],
@@ -238,10 +240,10 @@ public sealed class RDCorePlatformJsonWireTests
     private static readonly (string Type, string Json)[] Goldens =
     [
         ("SessionStatusParams", """{"waitMilliseconds":250}"""),
-        ("SessionStatusResult", """{"isComposed":true,"projectName":"VBAProject","moduleCount":3,"referenceCount":2,"memory":{"reservedBytes":1,"availableBytes":2,"allocatedBytes":3,"freeBytes":4,"committedBytes":5,"largestFreeBlock":6}}"""),
+        ("SessionStatusResult", """{"isComposed":true,"projectName":"VBAProject","moduleCount":3,"referenceCount":2,"formsLoaded":1,"memory":{"reservedBytes":1,"availableBytes":2,"allocatedBytes":3,"freeBytes":4,"committedBytes":5,"largestFreeBlock":6}}"""),
         ("SessionExecuteParams", """{"source":"Debug.Print 1","moduleName":"Module1","entryPoint":"Main","debug":true,"immediate":true,"sessionModule":true}"""),
-        ("ExecuteResult", """{"outcome":7,"output":["1"],"streamedLines":7,"diagnostics":["RDC00001"],"errorNumber":13,"errorMessage":"Type mismatch","errorCode":"VBR00013","errorTitle":"Type mismatch","errorSource":"VBAProject","errorLine":3,"errorCharacter":4,"errorModule":"Module1","errorLineNumber":100,"conditionError":"x","stackTrace":[{"procedure":"Main","line":1,"character":2,"returnLines":[5,6],"module":"Module1"}],"errorDetails":null}"""),
-        ("ExecuteResult", """{"outcome":3,"output":[],"streamedLines":0,"diagnostics":[],"errorNumber":6,"errorMessage":"","errorCode":"","errorTitle":"","errorSource":"","errorLine":-1,"errorCharacter":-1,"errorModule":"","errorLineNumber":0,"conditionError":"","stackTrace":[],"errorDetails":{"message":"Overflow","expression":{"kind":"Binary","semanticId":"Module1.Main.x","location":{"uri":"file:///c:/workspace/Module1.bas","range":{"start":{"line":1,"character":2},"end":{"line":3,"character":4},"isEmpty":false}}},"frames":[{"nodeId":"node-1","inputs":[{"typeName":"Long","value":"40000"},{"typeName":"Variant","value":null}],"coercion":{"source":{"typeName":"Long","value":"40000"},"destinationTypeName":"Integer"}}],"framesTruncated":true}}"""),
+        ("ExecuteResult", """{"outcome":7,"formsShown":true,"output":["1"],"streamedLines":7,"diagnostics":["RDC00001"],"errorNumber":13,"errorMessage":"Type mismatch","errorCode":"VBR00013","errorTitle":"Type mismatch","errorSource":"VBAProject","errorLine":3,"errorCharacter":4,"errorModule":"Module1","errorLineNumber":100,"conditionError":"x","stackTrace":[{"procedure":"Main","line":1,"character":2,"returnLines":[5,6],"module":"Module1"}],"errorDetails":null}"""),
+        ("ExecuteResult", """{"outcome":3,"formsShown":false,"output":[],"streamedLines":0,"diagnostics":[],"errorNumber":6,"errorMessage":"","errorCode":"","errorTitle":"","errorSource":"","errorLine":-1,"errorCharacter":-1,"errorModule":"","errorLineNumber":0,"conditionError":"","stackTrace":[],"errorDetails":{"message":"Overflow","expression":{"kind":"Binary","semanticId":"Module1.Main.x","location":{"uri":"file:///c:/workspace/Module1.bas","range":{"start":{"line":1,"character":2},"end":{"line":3,"character":4},"isEmpty":false}}},"frames":[{"nodeId":"node-1","inputs":[{"typeName":"Long","value":"40000"},{"typeName":"Variant","value":null}],"coercion":{"source":{"typeName":"Long","value":"40000"},"destinationTypeName":"Integer"}}],"framesTruncated":true}}"""),
         ("SessionDiscardParams", """{"moduleName":"Module1","endProgram":true}"""),
         ("DiscardResult", """{"discarded":2}"""),
         ("SessionPeekParams", """{"address":16}"""),
@@ -265,7 +267,7 @@ public sealed class RDCorePlatformJsonWireTests
         ("SessionDebugVariablesParams", """{"frameId":1,"scope":1,"reference":9}"""),
         ("SessionDebugEvaluateParams", """{"frameId":1,"expression":"i + 1"}"""),
         ("SessionDebugExecuteParams", """{"frameId":1,"statement":"i = 2"}"""),
-        ("SessionDebugStoppedParams", """{"stop":{"outcome":7,"output":["clicked"],"streamedLines":0,"diagnostics":[],"errorNumber":0,"errorMessage":"","errorCode":"","errorTitle":"","errorSource":"","errorLine":-1,"errorCharacter":-1,"errorModule":"","errorLineNumber":0,"conditionError":"","stackTrace":[{"procedure":"Command1_Click","line":4,"character":4,"returnLines":[],"module":"Form1"}],"errorDetails":null}}"""),
+        ("SessionDebugStoppedParams", """{"stop":{"outcome":7,"formsShown":false,"output":["clicked"],"streamedLines":0,"diagnostics":[],"errorNumber":0,"errorMessage":"","errorCode":"","errorTitle":"","errorSource":"","errorLine":-1,"errorCharacter":-1,"errorModule":"","errorLineNumber":0,"conditionError":"","stackTrace":[{"procedure":"Command1_Click","line":4,"character":4,"returnLines":[],"module":"Form1"}],"errorDetails":null}}"""),
         ("DebugAck", """{"acted":true,"stopping":false}"""),
         ("DebugGotoResult", """{"moved":true,"reason":"moved","line":4,"character":0}"""),
         ("DebugGotoResult", """{"moved":false,"reason":null,"line":-1,"character":-1}"""),
