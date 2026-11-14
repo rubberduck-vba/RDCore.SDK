@@ -35,7 +35,7 @@ Ces bibliothèques sont en version **alpha** : leur API changera encore avant la
 
 ## Compiler
 
-À partir de la racine du dépôt, avec le SDK .NET 10 :
+À partir de la racine du dépôt, avec le SDK .NET 11 :
 
 ```
 dotnet build RDCore.SDK.slnx
