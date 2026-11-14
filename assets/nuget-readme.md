@@ -19,7 +19,7 @@ Each assembly carries its French resources (`fr`) beside the English ones.
 dotnet add package RDCore.SDK --prerelease
 ```
 
-The package targets .NET 10 (`net10.0`).
+The package targets .NET 11 (`net11.0`).
 
 ## Documentation
 

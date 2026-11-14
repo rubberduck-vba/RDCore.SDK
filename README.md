@@ -35,7 +35,7 @@ These libraries are in **alpha**: their API will still change before 1.0.
 
 ## Building
 
-From the repository root, with the .NET 10 SDK:
+From the repository root, with the .NET 11 SDK:
 
 ```
 dotnet build RDCore.SDK.slnx
