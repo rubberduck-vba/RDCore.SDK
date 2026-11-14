@@ -73,4 +73,32 @@ public sealed class DiagnosticFixesTests
         Assert.IsNull(DiagnosticFixes.Of(Carrying(new JObject { ["errorNumber"] = 13 })));
         Assert.IsNull(DiagnosticFixes.Of(Carrying(new JObject { ["edits"] = "not a list" })));
     }
+
+    [TestMethod]
+    public void AnItemToAddToAList_TravelsWithTheDiagnostic()
+    {
+        var fixes = new DiagnosticFixes
+        {
+            Rename = new RenameFix { Suggestions = ["Index"] },
+            Setting = new SettingFix { Title = "Allow the name 'i'", Key = "Diagnostics.MeaningfulNames.AllowedNames", Value = "i" },
+        };
+
+        // as the client sends it back: data as JSON it read and wrote.
+        var read = DiagnosticFixes.Of(Carrying(JToken.Parse(fixes.ToData().ToString())));
+
+        Assert.AreEqual("Diagnostics.MeaningfulNames.AllowedNames", read?.Setting?.Key);
+        Assert.AreEqual("i", read?.Setting?.Value);
+        Assert.AreEqual("Allow the name 'i'", read?.Setting?.Title);
+        CollectionAssert.AreEqual(new[] { "Index" }, read?.Rename?.Suggestions.ToArray());
+        Assert.AreEqual(0, read?.Edits.Count);
+    }
+
+    [TestMethod]
+    public void AnItemToAddToAList_IsAFixOfItsOwn()
+    {
+        var read = DiagnosticFixes.Of(Carrying(JObject.Parse("""{ "setting": { "title": "Allow", "key": "K", "value": "v" } }""")));
+
+        Assert.AreEqual("v", read?.Setting?.Value);
+        Assert.IsNull(read?.Rename);
+    }
 }

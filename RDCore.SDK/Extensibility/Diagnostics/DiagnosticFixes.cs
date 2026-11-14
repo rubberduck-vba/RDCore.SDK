@@ -47,13 +47,19 @@ public sealed record class DiagnosticFixes
     public ProjectFix? Project { get; init; }
 
     /// <summary>
+    /// The fix is to add an item to the list of a setting, such as a name the analyzer is to allow; <see langword="null"/> when it is not.
+    /// </summary>
+    [JsonProperty("setting", NullValueHandling = NullValueHandling.Ignore)]
+    public SettingFix? Setting { get; init; }
+
+    /// <summary>
     /// The fixes a diagnostic carries, when it carries any: a diagnostic whose <c>data</c> is something else - the metadata of an error - has none.
     /// </summary>
     /// <param name="diagnostic">The diagnostic, as a client sent it back with a code action request.</param>
     public static DiagnosticFixes? Of(Diagnostic diagnostic)
     {
         if (diagnostic.Data is not JObject data || (data["rename"] is not JObject && data["edits"] is not JArray && data["refactoring"] is not JObject
-            && data["project"] is not JObject))
+            && data["project"] is not JObject && data["setting"] is not JObject))
         {
             return null;
         }
@@ -149,4 +155,30 @@ public sealed record class RefactoringFix
     /// </summary>
     [JsonProperty("kind")]
     public string Kind { get; init; } = string.Empty;
+}
+
+/// <summary>
+/// An item added to the list of a setting, which fixes a finding: the name the finding is about, added to the names the analyzer allows
+/// (<c>Diagnostics.MeaningfulNames.AllowedNames</c>). The client keeps the list (<c>rdcore/settings/listValue</c>); the platform offers the fix only to a client
+/// that expects to be asked to.
+/// </summary>
+public sealed record class SettingFix
+{
+    /// <summary>
+    /// What the code action that adds the item is called, in the language of the analyzer's messages: <c>Allow the name 'i'</c>.
+    /// </summary>
+    [JsonProperty("title")]
+    public string Title { get; init; } = string.Empty;
+
+    /// <summary>
+    /// The key of the setting, under <c>Configuration</c>: <c>Diagnostics.MeaningfulNames.AllowedNames</c>.
+    /// </summary>
+    [JsonProperty("key")]
+    public string Key { get; init; } = string.Empty;
+
+    /// <summary>
+    /// The item, as it is written: <c>i</c>.
+    /// </summary>
+    [JsonProperty("value")]
+    public string Value { get; init; } = string.Empty;
 }
