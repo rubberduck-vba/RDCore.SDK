@@ -56,7 +56,7 @@ public static class ProgramBlocks
             return [];
         }
 
-        // the program is the body of its module's procedure, which is no block of the program.
+        // the program is the body of its module's procedure, which is not a block of the program.
         var text = BasicProgramText.ToModuleSource(string.Join(NewLine, statements.Select(statement => statement.TrimStart())) + NewLine);
         var first = BasicProgramText.HeaderLines;
         return [.. ModuleBlocks.OpenAt(parse(text), text, index + first)

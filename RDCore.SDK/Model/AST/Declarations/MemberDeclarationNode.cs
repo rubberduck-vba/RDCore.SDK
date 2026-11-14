@@ -61,7 +61,7 @@ public record class MemberDeclarationNode(SyntaxNodeId Identity, SourceLocation 
 
     /// <summary>
     /// Where the statement that closes the procedure is written: its <c>End Sub</c>, <c>End Function</c> or <c>End Property</c>; <see langword="null"/>
-    /// for a member that is no procedure, for a procedure written without one, or when it is not known.
+    /// for a member that is not a procedure, for a procedure written without one, or when it is not known.
     /// </summary>
     /// <remarks>
     /// The range of the member runs through the <c>Attribute</c> lines written after this statement, which belong to the procedure: this is where its body

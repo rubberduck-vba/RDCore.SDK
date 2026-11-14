@@ -48,7 +48,7 @@ public record class SessionStatusResult
     public int ReferenceCount { get; init; }
 
     /// <summary>
-    /// The number of forms the session has loaded: shown or hidden, and not unloaded yet.
+    /// The number of forms the session has loaded and not unloaded, shown or hidden.
     /// </summary>
     public int FormsLoaded { get; init; }
 

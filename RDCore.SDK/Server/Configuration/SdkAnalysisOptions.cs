@@ -14,7 +14,7 @@ public record class SdkAnalysisOptions
     /// <remarks>
     /// <para>
     /// A code of the platform's analyzers or of an extension's can be disabled. A code of the language's own errors cannot
-    /// (<see cref="RDCoreDiagnosticCode.CanBeDisabled"/>): it is no value of the setting, and one written by hand is not read.
+    /// (<see cref="RDCoreDiagnosticCode.CanBeDisabled"/>): it is not a value of the setting, and one written by hand is not read.
     /// </para>
     /// <para>
     /// A workspace has a list of its own too (<see cref="IWorkspaceSettings"/>): a code either list says is disabled is (<see cref="DisabledCodesWith"/>). A client
@@ -25,7 +25,7 @@ public record class SdkAnalysisOptions
     public List<string> DisabledDiagnostics { get; set; } = [];
 
     /// <summary>
-    /// The codes of <see cref="DisabledDiagnostics"/> that can be disabled, each once: what is written in the list and is no such code is not one.
+    /// The codes of <see cref="DisabledDiagnostics"/> that can be disabled, each once. What is written in the list and is not such a code is left out.
     /// </summary>
     public IReadOnlySet<RDCoreDiagnosticCode> DisabledCodes => CodesIn(DisabledDiagnostics);
 
@@ -37,7 +37,7 @@ public record class SdkAnalysisOptions
     public IReadOnlySet<RDCoreDiagnosticCode> DisabledCodesWith(IEnumerable<string> workspace) => CodesIn(DisabledDiagnostics.Concat(workspace));
 
     /// <summary>
-    /// The codes of diagnostics that can be disabled in a list of texts, each once, without regard to case: what is no such code is not one.
+    /// The codes of diagnostics that can be disabled in a list of texts, each once, without regard to case. A text that is not such a code is left out.
     /// </summary>
     /// <param name="texts">The texts: <c>rdc01001</c>, <c>XYZ00042</c>.</param>
     public static IReadOnlySet<RDCoreDiagnosticCode> CodesIn(IEnumerable<string> texts)

@@ -473,7 +473,7 @@ public static class CompletionCandidates
     }
 
     /// <summary>
-    /// How long the rest of the word the cursor is in is: the letters, digits and underscores right after it, as a name has them.
+    /// The length of the rest of the word the cursor is in: the letters, digits and underscores right after it, as a name has them.
     /// </summary>
     /// <param name="after">What follows the cursor on its line.</param>
     /// <returns>The number of characters of <paramref name="after"/> the word goes on for; 0 when the cursor is at its end.</returns>

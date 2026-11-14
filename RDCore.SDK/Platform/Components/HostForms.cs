@@ -5,7 +5,7 @@ using RDCore.SDK.Platform.Protocol;
 namespace RDCore.SDK.Platform.Components;
 
 /// <summary>
-/// Notification <c>rdcore/host/forms/unloaded</c>: the session has no form loaded any more.
+/// Notification <c>rdcore/host/forms/unloaded</c>: the session has no form loaded.
 /// </summary>
 /// <remarks>
 /// Sent by the environment host when the last loaded form of the session is unloaded, or let go of, or ended with the rest of the session's state by an

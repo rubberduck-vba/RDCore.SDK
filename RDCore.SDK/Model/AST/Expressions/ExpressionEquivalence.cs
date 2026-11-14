@@ -12,7 +12,7 @@ namespace RDCore.SDK.Model.AST.Expressions;
 /// <para>
 /// Two expressions are the same when they are made of the same operations on the same operands, the way VBA reads them: names compare without regard to
 /// case (<c>A.B(1)</c> and <c>a.b( 1 )</c>), and literals by their type and value (<c>&amp;HFF</c> and <c>255</c>). Where they are written, and the
-/// blanks, comments and line continuations between their parts, are no part of what they are.
+/// blanks, comments and line continuations between their parts, are not part of what they are.
 /// </para>
 /// <para>
 /// How a name is written is part of it: <c>s$</c> is not <c>s</c>, and <c>[A1]</c> is not <c>A1</c>. Every pair of parentheses is an operation of its own

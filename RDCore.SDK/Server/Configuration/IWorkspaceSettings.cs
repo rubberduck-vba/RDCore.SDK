@@ -7,7 +7,7 @@ namespace RDCore.SDK.Server.Configuration;
 /// <remarks>
 /// <para>
 /// A setting of a workspace adds to the user's setting of the platform: a code either one disables is disabled (<see cref="SdkAnalysisOptions.DisabledCodesWith"/>).
-/// What a workspace keeps is checked as the user's settings are: an item that is no value of the setting is neither kept nor read.
+/// What a workspace keeps is checked as the user's settings are: an item that is not a value of the setting is neither kept nor read.
 /// </para>
 /// <para>
 /// Where a workspace keeps its settings is the implementation's to say. A client changes them as a change of its own, as it changes the user's settings: the

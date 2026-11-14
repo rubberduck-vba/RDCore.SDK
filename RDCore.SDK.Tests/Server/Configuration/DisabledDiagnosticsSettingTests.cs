@@ -6,7 +6,7 @@ namespace RDCore.Tests.Server.Configuration;
 
 /// <summary>
 /// <c>Analysis.DisabledDiagnostics</c>: the codes whose diagnostics are not reported, a setting of the platform that changes while it runs. Each is a code of
-/// an analyzer's diagnostic, of the platform or of an extension; a code of the language's own errors is no value of it, when it is set and when it is read. A
+/// an analyzer's diagnostic, of the platform or of an extension; a code of the language's own errors is not a value of it, when it is set and when it is read. A
 /// code is added to the list a user set, or removed from it, one at a time.
 /// </summary>
 [TestClass]

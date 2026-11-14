@@ -68,7 +68,7 @@ public record class ListSettingValueParams
 public record class ListSettingValueResult
 {
     /// <summary>
-    /// Whether the list now holds the item, or does not when it was to be removed: <see langword="false"/> when the client declined, or the item is no value of
+    /// Whether the list now holds the item, or does not when it was to be removed: <see langword="false"/> when the client declined, or the item is not a value of
     /// the setting.
     /// </summary>
     public bool Applied { get; init; }

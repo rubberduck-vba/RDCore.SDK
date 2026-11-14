@@ -125,7 +125,7 @@ public static class RDCoreComponentProtocol
     public const string HostDebugStopped = "rdcore/host/debug/stopped";
 
     /// <summary>
-    /// Tells the language server that the session has no form loaded any more: a notification from the environment host, sent when the last loaded form is
+    /// Tells the language server that the session has no form loaded: a notification from the environment host, sent when the last loaded form is
     /// unloaded, or let go of, or ended with the rest of the session's state by an <c>End</c>.
     /// </summary>
     public const string HostFormsUnloaded = "rdcore/host/forms/unloaded";
