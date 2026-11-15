@@ -118,6 +118,30 @@ public sealed class StdPictureObjectTests
         Assert.IsTrue(picture.Bytes.Span.SequenceEqual(bytes));
     }
 
+    // Visual Basic 6.0's LoadPicture Size: vbLPSmall 0, vbLPLarge 1, vbLPSmallShell 2, vbLPLargeShell 3, vbLPCustom 4 (X by Y); X and Y read for 4 only.
+    [TestMethod]
+    [DataRow(null, 0, 0, DisplayName = "no size")]
+    [DataRow(0, 16, 16, DisplayName = "vbLPSmall")]
+    [DataRow(1, 32, 32, DisplayName = "vbLPLarge")]
+    [DataRow(2, 16, 16, DisplayName = "vbLPSmallShell")]
+    [DataRow(3, 32, 32, DisplayName = "vbLPLargeShell")]
+    [DataRow(4, 48, 24, DisplayName = "vbLPCustom")]
+    [DataRow(7, 32, 32, DisplayName = "another value")]
+    public void TheIconSizeOfVisualBasicsSize_IsTheSystemsOrXByY(int? size, int width, int height)
+    {
+        Assert.AreEqual((width, height), StdPictureObject.IconSizeOf(size, 48, 24));
+    }
+
+    // the image vbLPSmall chooses of an icon of 32 by 32 and 16 by 16 images: the 16 by 16 one.
+    [TestMethod]
+    public void VisualBasicsSmallSize_LoadsAnIconsSmallImage()
+    {
+        var (width, height) = StdPictureObject.IconSizeOf(0, 0, 0);
+        var image = Loaded(Icon(1, Dib(32), Dib(16)), width, height).Image!.Value;
+
+        Assert.AreEqual((16, 16), (image.Width, image.Height));
+    }
+
     // an RD-VBA addition: MS-VBA raises 481 for an icon or a cursor whose image to load is a PNG.
     [TestMethod]
     [DataRow((short)1, PictureFormat.Icon, DisplayName = "an icon")]

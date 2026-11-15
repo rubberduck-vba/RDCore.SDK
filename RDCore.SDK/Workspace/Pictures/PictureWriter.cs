@@ -269,6 +269,36 @@ public static class PictureWriter
         return bytes;
     }
 
+    /// <summary>
+    /// Writes an icon file or a cursor file that holds one of a file's images, as the file holds it.
+    /// </summary>
+    /// <param name="file">An icon file or a cursor file.</param>
+    /// <param name="image">One of its images, as <see cref="PictureHeader.TryReadIconImages"/> reads them.</param>
+    /// <returns>
+    /// The bytes of a file of the same type, an icon or a cursor, whose one directory entry is the image's own, a cursor's hot spot included, and whose
+    /// image is the image's bytes as they are: a PNG stays a PNG, and a DIB keeps its depth, its color table and its AND mask.
+    /// </returns>
+    /// <exception cref="ArgumentException">
+    /// <paramref name="file"/> is not an icon file or a cursor file, or <paramref name="image"/> is not one of its images.
+    /// </exception>
+    public static byte[] WriteIconImage(ReadOnlySpan<byte> file, IconImage image)
+    {
+        var index = PictureHeader.TryReadIconImages(file, out var images) ? images.IndexOf(image) : -1;
+        if (index < 0)
+        {
+            throw new ArgumentException("The image is not one of the icon's or the cursor's images.", nameof(image));
+        }
+
+        var bytes = new byte[Directory + image.Length];
+        file[..4].CopyTo(bytes);
+        BinaryPrimitives.WriteInt16LittleEndian(bytes.AsSpan(4), 1);
+        file.Slice(6 + 16 * index, 16).CopyTo(bytes.AsSpan(6));
+        BinaryPrimitives.WriteInt32LittleEndian(bytes.AsSpan(14), image.Length);
+        BinaryPrimitives.WriteInt32LittleEndian(bytes.AsSpan(18), Directory);
+        file.Slice(image.Offset, image.Length).CopyTo(bytes.AsSpan(Directory));
+        return bytes;
+    }
+
     // an icon file's header (type 1, one image) and its directory entry: the image's sides (0 for 256 or more), its colors, planes and bits per pixel, its
     // size, and its offset, just past the entry.
     private static void IconDirectory(Span<byte> file, int width, int height, int colors, int planes, int bits, int size)

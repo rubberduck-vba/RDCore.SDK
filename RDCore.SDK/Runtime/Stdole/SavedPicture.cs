@@ -76,6 +76,32 @@ public static class SavedPicture
         };
     }
 
+    /// <summary>
+    /// The file <c>SavePicture</c> writes for a picture, or why it writes none.
+    /// </summary>
+    /// <param name="picture">The picture to save.</param>
+    /// <param name="bytes">
+    /// The file's bytes, as <see cref="BytesOf"/> gives them, when the result is <see cref="SavedPictureFailure.None"/>; <see langword="null"/> otherwise.
+    /// </param>
+    /// <returns>
+    /// <see cref="SavedPictureFailure.None"/> when there is a file to write, no bytes for an object made by <c>New StdPicture</c> included;
+    /// <see cref="SavedPictureFailure.NoPicture"/> for an object that holds no picture otherwise; <see cref="SavedPictureFailure.NotDecoded"/> for a
+    /// picture whose pixels are not decoded.
+    /// </returns>
+    /// <exception cref="ArgumentNullException"><paramref name="picture"/> is <see langword="null"/>.</exception>
+    public static SavedPictureFailure TryBytesOf(StdPictureObject picture, out byte[]? bytes)
+    {
+        ArgumentNullException.ThrowIfNull(picture);
+        if (picture is { Format: null, IsNew: false })
+        {
+            bytes = null;
+            return SavedPictureFailure.NoPicture;
+        }
+
+        bytes = BytesOf(picture);
+        return bytes is null ? SavedPictureFailure.NotDecoded : SavedPictureFailure.None;
+    }
+
     // the image the picture holds, or the file's first: as a PNG where it is stored as one, at 32 bits where its alpha is more than its mask gives, in the 16
     // icon colors otherwise.
     private static byte[]? Icon(ReadOnlySpan<byte> bytes, IconImage? image)
@@ -245,4 +271,26 @@ public static class SavedPicture
     }
 
     private static int Stride(int width, int bits) => (int)(((long)width * bits + 31) / 32 * 4);
+}
+
+/// <summary>
+/// Why <see cref="SavedPicture.TryBytesOf"/> gave no file for a picture.
+/// </summary>
+public enum SavedPictureFailure
+{
+    /// <summary>
+    /// There is a file to write.
+    /// </summary>
+    None,
+
+    /// <summary>
+    /// The object holds no picture and was not made by <c>New StdPicture</c>: the empty picture <c>LoadPicture</c> gives for no file name. MS-VBA's
+    /// <c>SavePicture</c> raises run-time error 380, "Invalid property value", for it.
+    /// </summary>
+    NoPicture,
+
+    /// <summary>
+    /// The picture's pixels are not decoded (<see cref="PictureDecodeFailure"/>), so no file is written for it.
+    /// </summary>
+    NotDecoded,
 }

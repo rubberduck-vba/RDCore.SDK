@@ -114,6 +114,39 @@ public sealed class PictureWriterTests
         Assert.AreEqual("0 0 0 0 0 0", string.Join(" ", back.Mask!.Value.ToArray()));
     }
 
+    // each of a cursor's two images, a DIB and a PNG, as a cursor of that one image: its directory entry, its hot spot included, and its bytes as they are.
+    [TestMethod]
+    [DataRow(0, DisplayName = "the DIB")]
+    [DataRow(1, DisplayName = "the PNG")]
+    public void AnIconImage_IsWrittenAsAFileOfThatImage_AsItIs(int which)
+    {
+        var dib = IconDib(2, 1, 24, [], [255, 255, 255, 0, 0, 0, 0, 0], [0x40, 0, 0, 0]);
+        var cursor = Icon(2, dib, Png(3, 1, 6, 8, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]));
+        BinaryPrimitives.WriteUInt32LittleEndian(cursor.AsSpan(6 + 16 * which + 4), 0x00070005);
+        cursor[6 + 16 * which] = (byte)(which == 0 ? 2 : 3);
+        Assert.IsTrue(PictureHeader.TryReadIconImages(cursor, out var images));
+        var image = images[which];
+
+        var file = PictureWriter.WriteIconImage(cursor, image);
+
+        Assert.AreEqual("000002000100", Convert.ToHexString(file, 0, 6));
+        Assert.AreEqual(Convert.ToHexString(cursor, 6 + 16 * which, 8), Convert.ToHexString(file, 6, 8));
+        Assert.AreEqual((image.Length, 22), (BinaryPrimitives.ReadInt32LittleEndian(file.AsSpan(14)), BinaryPrimitives.ReadInt32LittleEndian(file.AsSpan(18))));
+        Assert.AreEqual(Convert.ToHexString(cursor, image.Offset, image.Length), Convert.ToHexString(file, 22, file.Length - 22));
+        Assert.IsTrue(PictureHeader.TryReadIconImages(file, out var again));
+        Assert.AreEqual(image with { Offset = 22 }, again.Single());
+    }
+
+    [TestMethod]
+    public void AnIconImage_OfAFileThatIsNoIcon_OrNotOfTheFile_IsRefused()
+    {
+        var icon = Icon(1, IconDib(2, 1, 24, [], new byte[8], new byte[4]));
+        Assert.IsTrue(PictureHeader.TryReadIconImages(icon, out var images));
+
+        Assert.ThrowsExactly<ArgumentException>(() => PictureWriter.WriteIconImage(Png(1, 1, 6, 8, [0, 1, 2, 3, 4]), images[0]));
+        Assert.ThrowsExactly<ArgumentException>(() => PictureWriter.WriteIconImage(icon, images[0] with { Offset = 23 }));
+    }
+
     // the numbers as they are, and the table filled to the depth's colors with black.
     [TestMethod]
     [DataRow(8, 256)]

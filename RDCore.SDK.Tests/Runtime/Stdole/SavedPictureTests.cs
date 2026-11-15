@@ -87,6 +87,22 @@ public sealed class SavedPictureTests
         Assert.ThrowsExactly<ArgumentNullException>(() => SavedPicture.BytesOf(null!));
     }
 
+    // a new picture: a file of no bytes; the empty one LoadPicture gives for no file name: none, as MS-VBA raises 380 for it; a picture whose pixels are not
+    // decoded (a bitmap of BI_JPEG pixels): none either.
+    [TestMethod]
+    public void ThePictureSaved_OrWhyNoneIs()
+    {
+        Assert.AreEqual(SavedPictureFailure.None, SavedPicture.TryBytesOf(StdPictureObject.CreateNew(), out var none));
+        Assert.AreEqual(0, none!.Length);
+        Assert.AreEqual(SavedPictureFailure.NoPicture, SavedPicture.TryBytesOf(StdPictureObject.CreateEmpty(), out var empty));
+        Assert.IsNull(empty);
+        Assert.AreEqual(SavedPictureFailure.None, SavedPicture.TryBytesOf(Loaded(Bitmap2x2), out var bitmap));
+        CollectionAssert.AreEqual(SavedPicture.BytesOf(Loaded(Bitmap2x2)), bitmap);
+        Assert.AreEqual(SavedPictureFailure.NotDecoded, SavedPicture.TryBytesOf(Loaded(Bitmap(1, 1, 24, 4, [], [0, 0, 0, 0])), out var jpeg));
+        Assert.IsNull(jpeg);
+        Assert.ThrowsExactly<ArgumentNullException>(() => SavedPicture.TryBytesOf(null!, out _));
+    }
+
     [TestMethod]
     public void AMetafile_IsSavedAsItWasRead()
     {
