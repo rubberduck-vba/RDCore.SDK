@@ -81,12 +81,12 @@ public sealed class StdPictureObject
     /// <c>LoadPicture</c> reads. A PNG is a bitmap of the size its header states, its bytes kept as they are, alpha channel included: an
     /// RD-VBA addition, where MS-VBA raises error 481 for one. An icon or a cursor is its image of the size asked for, of the most bits per pixel
     /// when it has several of that size, and otherwise its first image, whatever its size. Asking for 0 by 0 is asking for the system's icon size,
-    /// 32 by 32. A GIF's size is its first frame's.
+    /// 32 by 32. An image stored as a PNG is loaded as any other, alpha channel included: an RD-VBA addition, where MS-VBA raises error 481 for
+    /// one. A GIF's size is its first frame's.
     /// </para>
     /// <para>
     /// The failures are those MS-VBA raises for the same files (Excel 64-bit), with the error numbers <see cref="StdPictureLoadFailure"/> gives. A
-    /// PNG whose header is malformed, a bitmap of uncompressed pixels whose rows end before its header says, and an icon or a cursor whose image to load is
-    /// stored as a PNG are invalid pictures.
+    /// PNG whose header is malformed and a bitmap of uncompressed pixels whose rows end before its header says are invalid pictures.
     /// </para>
     /// </remarks>
     /// <param name="bytes">The file's bytes. The picture keeps them as they are.</param>
@@ -118,11 +118,6 @@ public sealed class StdPictureObject
             case PictureFormat.Icon or PictureFormat.Cursor:
                 _ = PictureHeader.TryReadIconImages(span, out var images);
                 var image = Chosen(images, iconWidth, iconHeight);
-                if (PngDecoder.IsPng(span.Slice(image.Offset, image.Length)))
-                {
-                    return StdPictureLoadFailure.InvalidPicture;
-                }
-
                 picture = new StdPictureObject(info.Format, bytes, PictureInfo.PixelsToHimetric(image.Width), PictureInfo.PixelsToHimetric(image.Height), handle(), image);
                 return StdPictureLoadFailure.None;
             default:

@@ -118,11 +118,21 @@ public sealed class StdPictureObjectTests
         Assert.IsTrue(picture.Bytes.Span.SequenceEqual(bytes));
     }
 
+    // an RD-VBA addition: MS-VBA raises 481 for an icon or a cursor whose image to load is a PNG.
     [TestMethod]
-    public void AnIconOrACursor_WhoseImageIsAPng_IsAnInvalidPicture_481()
+    [DataRow((short)1, PictureFormat.Icon, DisplayName = "an icon")]
+    [DataRow((short)2, PictureFormat.Cursor, DisplayName = "a cursor")]
+    public void AnIconOrACursor_WhoseImageIsAPng_IsType3_ThatImage(short type, PictureFormat format)
     {
-        Assert.AreEqual(StdPictureLoadFailure.InvalidPicture, Refused(Icon(1, PngHeader(32, 32))));
-        Assert.AreEqual(StdPictureLoadFailure.InvalidPicture, Refused(Icon(2, PngHeader(32, 32))));
+        var png = PngHeader(24, 16);
+        var bytes = Icon(type, Dib(16), png);
+
+        var picture = Loaded(bytes, 24, 16);
+
+        Assert.AreEqual((format, (short)3), (picture.Format, picture.Type));
+        Assert.AreEqual((24, 16, 32), (picture.Image!.Value.Width, picture.Image.Value.Height, picture.Image.Value.BitCount));
+        Assert.AreEqual((PictureInfo.PixelsToHimetric(24), PictureInfo.PixelsToHimetric(16)), (picture.Width, picture.Height));
+        Assert.IsTrue(picture.Bytes.Span.Slice(picture.Image.Value.Offset, picture.Image.Value.Length).SequenceEqual(png));
     }
 
     [TestMethod]
