@@ -15,15 +15,29 @@ namespace RDCore.SDK.Runtime.Stdole;
 /// <item><term>A compressed bitmap</term><description>Its decoded pixels, uncompressed: for 8 bits per pixel or fewer, at the least of 1, 4 and 8 bits per
 /// pixel that numbers its color table, with that table filled as <see cref="PictureWriter.WriteBitmap"/> fills it; at 24 bits otherwise. A pixel the
 /// compression skips is color number 0.</description></item>
+/// <item><term>A bitmap whose bit fields state an alpha field</term><description>Where a pixel's alpha is not 255, a bitmap of 32 bits per pixel that keeps
+/// each pixel's alpha, not premultiplied, under a <c>BITMAPV5HEADER</c> whose bit fields state the alpha: RD-VBA addition, where MS-VBA writes it at 24
+/// bits, its alpha left out. Where every pixel is opaque, it is written as a compressed bitmap is.</description></item>
 /// <item><term>A GIF</term><description>A bitmap of its first frame's size and color numbers, at the least of 1, 4 and 8 bits per pixel that numbers its
-/// color table, with that table filled as <see cref="PictureWriter.WriteBitmap"/> fills it. Its transparent color keeps its own number.</description></item>
-/// <item><term>A PNG</term><description>A bitmap of 24 bits per pixel, its alpha left out, as a 32-bit bitmap's is. RD-VBA addition: MS-VBA does not load a
-/// PNG.</description></item>
+/// color table, with that table filled as <see cref="PictureWriter.WriteBitmap"/> fills it. A GIF one of whose pixels is its transparent color is written
+/// as a bitmap of 32 bits per pixel instead, as a bitmap with an alpha field is, those pixels clear. RD-VBA addition: MS-VBA writes the transparent color as
+/// its own number, and the file loads opaque.</description></item>
+/// <item><term>A PNG</term><description>A PNG of 8 bits per channel that keeps each pixel's alpha, written by <see cref="PictureWriter.WritePng"/>, whatever
+/// the depth and color type it was loaded at. RD-VBA addition: MS-VBA does not load a PNG.</description></item>
 /// <item><term>An icon, a cursor</term><description>An icon of one image, the one the picture holds (<see cref="StdPictureObject.Image"/>), written by
-/// <see cref="PictureWriter.WriteIcon"/>: 4 bits per pixel in <see cref="PictureWriter.IconColors"/>, and its AND mask.</description></item>
+/// <see cref="PictureWriter.WriteIcon(DecodedPicture)"/>: 4 bits per pixel in <see cref="PictureWriter.IconColors"/>, and its AND mask. A cursor is written
+/// as an icon. An image with an alpha that its mask does not give keeps that alpha, an RD-VBA addition where MS-VBA writes the 16 colors and the mask:
+/// an image stored as a PNG is written by <see cref="PictureWriter.WritePngIcon"/>, as a PNG; a 32-bit image with a pixel whose alpha is neither 0 where the mask is set nor
+/// 255 where it is clear, by <see cref="PictureWriter.WriteIcon(DecodedPicture, int)"/>, at 32 bits per pixel with its own AND mask. Any other image has
+/// its transparency in its mask (a 32-bit image whose alpha is all 0 included), and is written in the 16 colors.</description></item>
 /// <item><term>A JPEG</term><description>A bitmap of 24 bits per pixel. A JPEG of a kind that is not decoded
 /// (<see cref="PictureDecodeFailure.NotDecoded"/>) is not written: <see cref="BytesOf"/> returns <see langword="null"/>.</description></item>
 /// </list>
+/// <para>
+/// The file keeps the alpha <see cref="PictureDecoder"/> reads from the picture: decoded, it has the alpha the picture decodes to, pixel by pixel. A
+/// picture that decodes opaque (a 32-bit bitmap of <c>BI_RGB</c>, whose fourth byte is reserved, among others), and an icon image whose alpha is its
+/// mask's, have no more alpha to keep than MS-VBA's file holds, and are written as MS-VBA writes them.
+/// </para>
 /// <para>
 /// A picture's pixels are decoded by <see cref="PictureDecoder"/>, so a body cut short is written with the pixels it lacks as 0.
 /// </para>
@@ -54,24 +68,103 @@ public static class SavedPicture
             PictureFormat.Metafile or PictureFormat.EnhancedMetafile => picture.Bytes.ToArray(),
             PictureFormat.Bitmap => Bitmap(bytes) ?? Decoded(bytes),
             PictureFormat.Icon or PictureFormat.Cursor => Icon(bytes, picture.Image),
-            PictureFormat.Gif => PictureDecoder.TryDecode(bytes, out var gif) is PictureDecodeFailure.None ? PictureWriter.WriteBitmap(gif!, Depth(gif!)) : null,
+            PictureFormat.Gif => PictureDecoder.TryDecode(bytes, out var gif) is PictureDecodeFailure.None
+                ? PictureWriter.WriteBitmap(gif!, KeepsAlpha(gif!) ? 32 : Depth(gif!))
+                : null,
+            PictureFormat.Png => PictureDecoder.TryDecode(bytes, out var png) is PictureDecodeFailure.None ? PictureWriter.WritePng(png!) : null,
             _ => PictureDecoder.TryDecode(bytes, out var other) is PictureDecodeFailure.None ? PictureWriter.WriteBitmap(other!, 24) : null,
         };
     }
 
-    // the image the picture holds, or the file's first.
+    /// <summary>
+    /// The file <c>SavePicture</c> writes for a picture, or why it writes none.
+    /// </summary>
+    /// <param name="picture">The picture to save.</param>
+    /// <param name="bytes">
+    /// The file's bytes, as <see cref="BytesOf"/> gives them, when the result is <see cref="SavedPictureFailure.None"/>; <see langword="null"/> otherwise.
+    /// </param>
+    /// <returns>
+    /// <see cref="SavedPictureFailure.None"/> when there is a file to write, including the file of no bytes for an object made by <c>New StdPicture</c>;
+    /// <see cref="SavedPictureFailure.NoPicture"/> for an object that holds no picture otherwise; <see cref="SavedPictureFailure.NotDecoded"/> for a
+    /// picture whose pixels are not decoded.
+    /// </returns>
+    /// <exception cref="ArgumentNullException"><paramref name="picture"/> is <see langword="null"/>.</exception>
+    public static SavedPictureFailure TryBytesOf(StdPictureObject picture, out byte[]? bytes)
+    {
+        ArgumentNullException.ThrowIfNull(picture);
+        if (picture is { Format: null, IsNew: false })
+        {
+            bytes = null;
+            return SavedPictureFailure.NoPicture;
+        }
+
+        bytes = BytesOf(picture);
+        return bytes is null ? SavedPictureFailure.NotDecoded : SavedPictureFailure.None;
+    }
+
+    // the image the picture holds, or the file's first: as a PNG where it is stored as one, at 32 bits where its alpha is more than its mask gives, in the 16
+    // icon colors otherwise.
     private static byte[]? Icon(ReadOnlySpan<byte> bytes, IconImage? image)
     {
         DecodedPicture? decoded;
         var failure = image is { } held ? PictureDecoder.TryDecodeIconImage(bytes, held, out decoded) : PictureDecoder.TryDecode(bytes, out decoded);
-        return failure is PictureDecodeFailure.None ? PictureWriter.WriteIcon(decoded!) : null;
+        if (failure is not PictureDecodeFailure.None)
+        {
+            return null;
+        }
+
+        var stored = image ?? (PictureHeader.TryReadIconImages(bytes, out var images) ? images[0] : (IconImage?)null);
+        if (stored is { } read && PngDecoder.IsPng(bytes.Slice(read.Offset, read.Length)))
+        {
+            return PictureWriter.WritePngIcon(decoded!);
+        }
+
+        return PictureWriter.WriteIcon(decoded!, AlphaBeyondMask(decoded!) ? 32 : 4);
     }
 
-    // a compressed bitmap: decoded, then written at the least depth its colors fit where its pixels number them, and in 24 bits otherwise.
+    // a compressed bitmap: decoded, then written at 32 bits where its alpha is its own and not all opaque, at the least depth its colors fit where its pixels
+    // number them, and in 24 bits otherwise.
     private static byte[]? Decoded(ReadOnlySpan<byte> file) =>
         PictureDecoder.TryDecode(file, out var picture) is PictureDecodeFailure.None
-            ? PictureWriter.WriteBitmap(picture!, picture!.Indexes is null ? 24 : Depth(picture))
+            ? PictureWriter.WriteBitmap(picture!, KeepsAlpha(picture!) ? 32 : picture!.Indexes is null ? 24 : Depth(picture!))
             : null;
+
+    // a picture whose alpha is its own (an alpha field, a GIF's transparent color), with a pixel that is not opaque: what a bitmap of 24 bits or fewer would
+    // lose. The pixels a body cut short lacks make no picture's alpha its own.
+    private static bool KeepsAlpha(DecodedPicture picture)
+    {
+        if (!picture.HasAlphaChannel)
+        {
+            return false;
+        }
+
+        var bgra = picture.Bgra.Span;
+        for (var i = 3; i < bgra.Length; i += 4)
+        {
+            if (bgra[i] != 0xFF)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    // an icon image with a pixel whose alpha is not its mask's (0 where the mask is set, 255 where it is clear): what 16 colors and a mask would lose.
+    private static bool AlphaBeyondMask(DecodedPicture image)
+    {
+        var bgra = image.Bgra.Span;
+        var mask = image.Mask is { } m ? m.Span : default;
+        for (var i = 0; i < image.Width * image.Height; i++)
+        {
+            if (bgra[i * 4 + 3] != (!mask.IsEmpty && mask[i] != 0 ? 0 : 0xFF))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     // the least of 1, 4 and 8 bits per pixel that numbers the picture's color table, and every number its pixels hold.
     private static int Depth(DecodedPicture picture)
@@ -178,4 +271,26 @@ public static class SavedPicture
     }
 
     private static int Stride(int width, int bits) => (int)(((long)width * bits + 31) / 32 * 4);
+}
+
+/// <summary>
+/// Why <see cref="SavedPicture.TryBytesOf"/> gave no file for a picture.
+/// </summary>
+public enum SavedPictureFailure
+{
+    /// <summary>
+    /// There is a file to write.
+    /// </summary>
+    None,
+
+    /// <summary>
+    /// The object holds no picture and was not made by <c>New StdPicture</c>: the empty picture <c>LoadPicture</c> gives for no file name. MS-VBA's
+    /// <c>SavePicture</c> raises run-time error 380, "Invalid property value", for it.
+    /// </summary>
+    NoPicture,
+
+    /// <summary>
+    /// The picture's pixels are not decoded (<see cref="PictureDecodeFailure"/>), so no file is written for it.
+    /// </summary>
+    NotDecoded,
 }

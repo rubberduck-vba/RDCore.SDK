@@ -22,6 +22,10 @@ public sealed class StdPictureObject
     // the icon size LoadPicture takes when none is asked for: the system's.
     private const int IconSide = 32;
 
+    // the system's small icon size, and Visual Basic 6.0's vbLPCustom.
+    private const int SmallIconSide = 16;
+    private const int CustomSize = 4;
+
     private int _palette;
 
     /// <summary>
@@ -81,12 +85,12 @@ public sealed class StdPictureObject
     /// <c>LoadPicture</c> reads. A PNG is a bitmap of the size its header states, its bytes kept as they are, alpha channel included: an
     /// RD-VBA addition, where MS-VBA raises error 481 for one. An icon or a cursor is its image of the size asked for, of the most bits per pixel
     /// when it has several of that size, and otherwise its first image, whatever its size. Asking for 0 by 0 is asking for the system's icon size,
-    /// 32 by 32. A GIF's size is its first frame's.
+    /// 32 by 32. An image stored as a PNG is loaded as any other, alpha channel included: an RD-VBA addition, where MS-VBA raises error 481 for
+    /// one. A GIF's size is its first frame's.
     /// </para>
     /// <para>
     /// The failures are those MS-VBA raises for the same files (Excel 64-bit), with the error numbers <see cref="StdPictureLoadFailure"/> gives. A
-    /// PNG whose header is malformed, a bitmap of uncompressed pixels whose rows end before its header says, and an icon or a cursor whose image to load is
-    /// stored as a PNG are invalid pictures.
+    /// PNG whose header is malformed and a bitmap of uncompressed pixels whose rows end before its header says are invalid pictures.
     /// </para>
     /// </remarks>
     /// <param name="bytes">The file's bytes. The picture keeps them as they are.</param>
@@ -118,11 +122,6 @@ public sealed class StdPictureObject
             case PictureFormat.Icon or PictureFormat.Cursor:
                 _ = PictureHeader.TryReadIconImages(span, out var images);
                 var image = Chosen(images, iconWidth, iconHeight);
-                if (PngDecoder.IsPng(span.Slice(image.Offset, image.Length)))
-                {
-                    return StdPictureLoadFailure.InvalidPicture;
-                }
-
                 picture = new StdPictureObject(info.Format, bytes, PictureInfo.PixelsToHimetric(image.Width), PictureInfo.PixelsToHimetric(image.Height), handle(), image);
                 return StdPictureLoadFailure.None;
             default:
@@ -197,6 +196,32 @@ public sealed class StdPictureObject
     }
 
     private InvalidOperationException NoPalette() => new($"A picture of type {Type} has no palette.");
+
+    /// <summary>
+    /// The icon size Visual Basic 6.0's <c>LoadPicture([FileName], [Size], [ColorDepth], [X], [Y])</c> asks <see cref="TryLoad"/> for: what its
+    /// <c>Size</c>, <c>X</c> and <c>Y</c> arguments choose of an icon's or a cursor's images.
+    /// </summary>
+    /// <param name="size">
+    /// The <c>Size</c> argument, a <c>VBRUN.LoadPictureSizeConstants</c> value; <see langword="null"/> where it is missing or <c>Empty</c>.
+    /// </param>
+    /// <param name="x">The <c>X</c> argument: the width asked for with <c>vbLPCustom</c> (4), and read for no other size.</param>
+    /// <param name="y">The <c>Y</c> argument: the height asked for with <c>vbLPCustom</c> (4), and read for no other size.</param>
+    /// <returns>
+    /// The width and the height to pass to <see cref="TryLoad"/>: 0 by 0 for no size, which <see cref="TryLoad"/> takes as the system's icon size, as
+    /// stdole's <c>LoadPicture</c> does; 16 by 16 for <c>vbLPSmall</c> (0) and <c>vbLPSmallShell</c> (2); <paramref name="x"/> by <paramref name="y"/> for
+    /// <c>vbLPCustom</c> (4); and 32 by 32 for any other value, <c>vbLPLarge</c> (1) and <c>vbLPLargeShell</c> (3) included.
+    /// </returns>
+    /// <remarks>
+    /// The system's sizes and the shell's are the same: 16 by 16 for a small icon and 32 by 32 for a large one. <c>ColorDepth</c> changes nothing a program
+    /// can read, so it chooses nothing: of the images of the size asked for, <see cref="TryLoad"/> loads the one of the most bits per pixel.
+    /// </remarks>
+    public static (int Width, int Height) IconSizeOf(int? size, int x, int y) => size switch
+    {
+        null => (0, 0),
+        0 or 2 => (SmallIconSide, SmallIconSide),
+        CustomSize => (x, y),
+        _ => (IconSide, IconSide),
+    };
 
     // the image of the size asked for, of the most bits per pixel when there are several; with none of that size, the first of the file, whatever its
     // size: no size near the one asked for is preferred to it (observed in Excel).

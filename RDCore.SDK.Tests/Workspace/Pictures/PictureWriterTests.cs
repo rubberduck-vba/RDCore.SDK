@@ -48,6 +48,105 @@ public sealed class PictureWriterTests
             Assert.AreEqual(i % 4 == 3 ? (byte)0xFF : source[i], written[i], $"byte {i}");
     }
 
+    // a PNG of 3 by 2 whose alpha is 3, 128, 255, 1, 2 and 3: every byte read back as it was written, its alpha included, under an IHDR of 8 bits per
+    // channel and color type 6.
+    [TestMethod]
+    public void APng_IsReadBackAsItsPictures_WithItsAlpha()
+    {
+        var png = Decoded(Png(3, 2, 6, 8, [0, 1, 2, 3, 3, 4, 5, 6, 128, 7, 8, 9, 255, 0, 10, 11, 12, 1, 13, 14, 15, 2, 16, 17, 18, 3]));
+        var file = PictureWriter.WritePng(png);
+
+        Assert.AreEqual("89504E470D0A1A0A0000000D4948445200000003000000020806000000", Convert.ToHexString(file, 0, 29));
+        Assert.AreEqual("0000000049454E44AE426082", Convert.ToHexString(file[^12..]));
+        CollectionAssert.AreEqual(png.Bgra.ToArray(), Decoded(file).Bgra.ToArray());
+    }
+
+    // the IHDR of a PNG of 3 by 1, and its CRC-32.
+    [TestMethod]
+    public void APngsChunk_EndsWithItsCrc()
+    {
+        var file = PictureWriter.WritePng(Decoded(Png(3, 1, 6, 8, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])));
+
+        Assert.AreEqual("1BE014B4", Convert.ToHexString(file, 29, 4));
+    }
+
+    // an icon of one image stored as that PNG: its entry states 32 bits per pixel, and a side of 256 pixels as 0; read back, it is its pictures again,
+    // with no mask.
+    [TestMethod]
+    public void APngIcon_IsReadBackAsItsPictures_WithItsAlphaAndNoMask()
+    {
+        var rows = new byte[1 + 256 * 4];
+        for (var i = 1; i < rows.Length; i++)
+            rows[i] = (byte)i;
+        var png = Decoded(Png(256, 1, 6, 8, rows));
+
+        var icon = PictureWriter.WritePngIcon(png);
+
+        Assert.IsTrue(PictureHeader.TryReadIconImages(icon, out var images));
+        Assert.AreEqual((256, 1, 32, 22, icon.Length - 22), (images[0].Width, images[0].Height, images[0].BitCount, images[0].Offset, images[0].Length));
+        Assert.AreEqual("00010000010020", Convert.ToHexString(icon, 6, 7));
+        Assert.AreEqual(PictureDecodeFailure.None, PictureDecoder.TryDecodeIconImage(icon, images[0], out var back));
+        CollectionAssert.AreEqual(png.Bgra.ToArray(), back!.Bgra.ToArray());
+        Assert.IsNull(back.Mask);
+    }
+
+    // a PNG of 3 by 2 whose alpha is 3, 128, 255, 1, 2 and 3, as a 32-bit bitmap: every byte read back as it was written, its alpha included.
+    [TestMethod]
+    public void A32BitBitmap_IsReadBackAsItsPictures_WithItsAlpha()
+    {
+        var png = Decoded(Png(3, 2, 6, 8, [0, 1, 2, 3, 3, 4, 5, 6, 128, 7, 8, 9, 255, 0, 10, 11, 12, 1, 13, 14, 15, 2, 16, 17, 18, 3]));
+        var file = PictureWriter.WriteBitmap(png, 32);
+
+        Assert.AreEqual(14 + 124 + 3 * 4 * 2, file.Length);
+        CollectionAssert.AreEqual(png.Bgra.ToArray(), Decoded(file).Bgra.ToArray());
+    }
+
+    // the same PNG as an icon image of 32 bits: its pixels as they are, and no pixel masked, none of them having an alpha of 0.
+    [TestMethod]
+    public void A32BitIcon_IsReadBackAsItsPictures_WithItsAlpha()
+    {
+        var png = Decoded(Png(3, 2, 6, 8, [0, 1, 2, 3, 3, 4, 5, 6, 128, 7, 8, 9, 255, 0, 10, 11, 12, 1, 13, 14, 15, 2, 16, 17, 18, 3]));
+        var icon = PictureWriter.WriteIcon(png, 32);
+        var back = Decoded(icon);
+
+        Assert.AreEqual(6 + 16 + 40 + 3 * 4 * 2 + 4 * 2, icon.Length);
+        CollectionAssert.AreEqual(png.Bgra.ToArray(), back.Bgra.ToArray());
+        Assert.AreEqual("0 0 0 0 0 0", string.Join(" ", back.Mask!.Value.ToArray()));
+    }
+
+    // each of a cursor's two images, a DIB and a PNG, as a cursor of that one image: its directory entry, its hot spot included, and its bytes as they are.
+    [TestMethod]
+    [DataRow(0, DisplayName = "the DIB")]
+    [DataRow(1, DisplayName = "the PNG")]
+    public void AnIconImage_IsWrittenAsAFileOfThatImage_AsItIs(int which)
+    {
+        var dib = IconDib(2, 1, 24, [], [255, 255, 255, 0, 0, 0, 0, 0], [0x40, 0, 0, 0]);
+        var cursor = Icon(2, dib, Png(3, 1, 6, 8, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]));
+        BinaryPrimitives.WriteUInt32LittleEndian(cursor.AsSpan(6 + 16 * which + 4), 0x00070005);
+        cursor[6 + 16 * which] = (byte)(which == 0 ? 2 : 3);
+        Assert.IsTrue(PictureHeader.TryReadIconImages(cursor, out var images));
+        var image = images[which];
+
+        var file = PictureWriter.WriteIconImage(cursor, image);
+
+        Assert.AreEqual("000002000100", Convert.ToHexString(file, 0, 6));
+        Assert.AreEqual(Convert.ToHexString(cursor, 6 + 16 * which, 8), Convert.ToHexString(file, 6, 8));
+        Assert.AreEqual((image.Length, 22), (BinaryPrimitives.ReadInt32LittleEndian(file.AsSpan(14)), BinaryPrimitives.ReadInt32LittleEndian(file.AsSpan(18))));
+        Assert.AreEqual(Convert.ToHexString(cursor, image.Offset, image.Length), Convert.ToHexString(file, 22, file.Length - 22));
+        Assert.IsTrue(PictureHeader.TryReadIconImages(file, out var again));
+        Assert.AreEqual(image with { Offset = 22 }, again.Single());
+    }
+
+    [TestMethod]
+    public void AnIconImage_OfAFileThatIsNoIcon_OrNotOfTheFile_IsRefused()
+    {
+        var icon = Icon(1, IconDib(2, 1, 24, [], new byte[8], new byte[4]));
+        Assert.IsTrue(PictureHeader.TryReadIconImages(icon, out var images));
+
+        Assert.ThrowsExactly<ArgumentException>(() => PictureWriter.WriteIconImage(Png(1, 1, 6, 8, [0, 1, 2, 3, 4]), images[0]));
+        Assert.ThrowsExactly<ArgumentException>(() => PictureWriter.WriteIconImage(icon, images[0] with { Offset = 23 }));
+    }
+
     // the numbers as they are, and the table filled to the depth's colors with black.
     [TestMethod]
     [DataRow(8, 256)]
@@ -113,7 +212,11 @@ public sealed class PictureWriterTests
 
         Assert.ThrowsExactly<ArgumentNullException>(() => PictureWriter.WriteBitmap(null!, 24));
         Assert.ThrowsExactly<ArgumentNullException>(() => PictureWriter.WriteIcon(null!));
-        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => PictureWriter.WriteBitmap(png, 32));
+        Assert.ThrowsExactly<ArgumentNullException>(() => PictureWriter.WritePng(null!));
+        Assert.ThrowsExactly<ArgumentNullException>(() => PictureWriter.WritePngIcon(null!));
+        Assert.ThrowsExactly<ArgumentNullException>(() => PictureWriter.WriteIcon(null!, 32));
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => PictureWriter.WriteBitmap(png, 16));
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => PictureWriter.WriteIcon(png, 24));
         Assert.ThrowsExactly<ArgumentException>(() => PictureWriter.WriteBitmap(png, 8));
         Assert.ThrowsExactly<ArgumentException>(() => PictureWriter.WriteBitmap(four, 1));
         Assert.AreEqual(3, Decoded(PictureWriter.WriteBitmap(four, 4)).Indexes!.Value.Span[0]);

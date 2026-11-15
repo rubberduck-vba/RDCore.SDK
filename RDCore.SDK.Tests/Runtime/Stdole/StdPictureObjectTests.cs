@@ -118,11 +118,45 @@ public sealed class StdPictureObjectTests
         Assert.IsTrue(picture.Bytes.Span.SequenceEqual(bytes));
     }
 
+    // Visual Basic 6.0's LoadPicture Size: vbLPSmall 0, vbLPLarge 1, vbLPSmallShell 2, vbLPLargeShell 3, vbLPCustom 4 (X by Y); X and Y read for 4 only.
     [TestMethod]
-    public void AnIconOrACursor_WhoseImageIsAPng_IsAnInvalidPicture_481()
+    [DataRow(null, 0, 0, DisplayName = "no size")]
+    [DataRow(0, 16, 16, DisplayName = "vbLPSmall")]
+    [DataRow(1, 32, 32, DisplayName = "vbLPLarge")]
+    [DataRow(2, 16, 16, DisplayName = "vbLPSmallShell")]
+    [DataRow(3, 32, 32, DisplayName = "vbLPLargeShell")]
+    [DataRow(4, 48, 24, DisplayName = "vbLPCustom")]
+    [DataRow(7, 32, 32, DisplayName = "another value")]
+    public void TheIconSizeOfVisualBasicsSize_IsTheSystemsOrXByY(int? size, int width, int height)
     {
-        Assert.AreEqual(StdPictureLoadFailure.InvalidPicture, Refused(Icon(1, PngHeader(32, 32))));
-        Assert.AreEqual(StdPictureLoadFailure.InvalidPicture, Refused(Icon(2, PngHeader(32, 32))));
+        Assert.AreEqual((width, height), StdPictureObject.IconSizeOf(size, 48, 24));
+    }
+
+    // the image vbLPSmall chooses of an icon of 32 by 32 and 16 by 16 images: the 16 by 16 one.
+    [TestMethod]
+    public void VisualBasicsSmallSize_LoadsAnIconsSmallImage()
+    {
+        var (width, height) = StdPictureObject.IconSizeOf(0, 0, 0);
+        var image = Loaded(Icon(1, Dib(32), Dib(16)), width, height).Image!.Value;
+
+        Assert.AreEqual((16, 16), (image.Width, image.Height));
+    }
+
+    // an RD-VBA addition: MS-VBA raises 481 for an icon or a cursor whose image to load is a PNG.
+    [TestMethod]
+    [DataRow((short)1, PictureFormat.Icon, DisplayName = "an icon")]
+    [DataRow((short)2, PictureFormat.Cursor, DisplayName = "a cursor")]
+    public void AnIconOrACursor_WhoseImageIsAPng_IsType3_ThatImage(short type, PictureFormat format)
+    {
+        var png = PngHeader(24, 16);
+        var bytes = Icon(type, Dib(16), png);
+
+        var picture = Loaded(bytes, 24, 16);
+
+        Assert.AreEqual((format, (short)3), (picture.Format, picture.Type));
+        Assert.AreEqual((24, 16, 32), (picture.Image!.Value.Width, picture.Image.Value.Height, picture.Image.Value.BitCount));
+        Assert.AreEqual((PictureInfo.PixelsToHimetric(24), PictureInfo.PixelsToHimetric(16)), (picture.Width, picture.Height));
+        Assert.IsTrue(picture.Bytes.Span.Slice(picture.Image.Value.Offset, picture.Image.Value.Length).SequenceEqual(png));
     }
 
     [TestMethod]
