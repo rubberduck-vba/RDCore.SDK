@@ -51,7 +51,7 @@ public sealed class SavedPictureTests
     private static string Numbers(byte[] bytes) => string.Join(" ", Decoded(bytes).Indexes!.Value.ToArray());
 
     // an icon of one 32 by 32 image of 32 bits: each pixel as 0xAARRGGBB from the top left, and its mask, set where asked.
-    private static byte[] Icon32(Func<int, int, uint> argb, Func<int, int, bool> masked)
+    private static byte[] Icon32(Func<int, int, uint> argb, Func<int, int, bool> masked, short type = 1)
     {
         var rows = new byte[32 * 32 * 4];
         var mask = new byte[32 * 4];
@@ -66,7 +66,7 @@ public sealed class SavedPictureTests
             }
         }
 
-        return Icon(1, IconDib(32, 32, 32, [], rows, mask));
+        return Icon(type, IconDib(32, 32, 32, [], rows, mask));
     }
 
     // a saved icon of one 32 by 32 image: its color table, its rows of 4 bits and its mask's rows from the bottom up, in hex.
@@ -122,16 +122,35 @@ public sealed class SavedPictureTests
         Assert.AreEqual("E0000000", Convert.ToHexString(narrow[^4..]));
     }
 
-    // The length and the first 16 bytes MS-VBA's SavePicture writes for pictures of these sizes: a GIF of 7 by 5 with a table of 256 colors as an 8-bit
-    // bitmap, and an icon's or a cursor's 32 by 32 image as an icon of 16 colors. The PNG, 6 by 4, as a 24-bit bitmap, is RD-VBA's own.
+    // RD-VBA's own, where MS-VBA writes 24 bits: a bitmap whose bit fields state an alpha field (BI_ALPHABITFIELDS), of red opaque, blue clear and green at
+    // alpha 128, saved at 32 bits per pixel under a BITMAPV5HEADER whose fields state the alpha; saved again from that bitmap, it is the same file.
     [TestMethod]
-    public void AGif_APng_AnIcon_AndACursor_AreSavedInMSVBAsLayout()
+    [DataRow(32, new uint[] { 0xFF0000, 0xFF00, 0xFF, 0xFF000000 }, "0000FFFFFF00000000FF0080", "0000FFFF FF000000 00FF0080", DisplayName = "32 bits")]
+    [DataRow(16, new uint[] { 0x7C00, 0x3E0, 0x1F, 0x8000 }, "00FC1F00", "0000FFFF FF000000", DisplayName = "16 bits, 1 of alpha")]
+    public void ABitmapWhoseBitFieldsStateAnAlphaField_IsSavedAt32Bits_KeepingItsAlpha(int bits, uint[] fields, string pixels, string saved)
+    {
+        var bitmap = Bitmap(bits == 32 ? 3 : 2, 1, bits, 6, fields, Convert.FromHexString(pixels));
+
+        var once = Saved(bitmap);
+        var twice = Saved(once);
+
+        Assert.AreEqual((124, 32, 3), (BinaryPrimitives.ReadInt32LittleEndian(once.AsSpan(14)), (int)BinaryPrimitives.ReadUInt16LittleEndian(once.AsSpan(28)),
+            BinaryPrimitives.ReadInt32LittleEndian(once.AsSpan(30))));
+        Assert.AreEqual("0000FF0000FF0000FF000000000000FF42475273", Convert.ToHexString(once, 54, 20));
+        Assert.AreEqual(saved, string.Join(" ", Enumerable.Range(0, bits == 32 ? 3 : 2).Select(pixel => Convert.ToHexString(once, 138 + pixel * 4, 4))));
+        Assert.AreEqual(Convert.ToHexString(Decoded(bitmap).Bgra.Span), Convert.ToHexString(Decoded(once).Bgra.Span));
+        CollectionAssert.AreEqual(once, twice);
+    }
+
+    // The length and the first 16 bytes MS-VBA's SavePicture writes for pictures of these sizes: a GIF of 7 by 5 with a table of 256 colors as an 8-bit
+    // bitmap, and an icon's or a cursor's 32 by 32 image as an icon of 16 colors.
+    [TestMethod]
+    public void AGif_AnIcon_AndACursor_AreSavedInMSVBAsLayout()
     {
         var gif = Gif(7, 5, Enumerable.Range(0, 256).Select(i => (uint)i).ToArray(), new byte[35], 7, 5);
         var dib = IconDib(32, 32, 32, [], new byte[32 * 32 * 4], new byte[32 * 4]);
 
         Assert.AreEqual("len 1118 424D5E04000000000000360400002800", Head(Saved(gif)));
-        Assert.AreEqual("len 134 424D8600000000000000360000002800", Head(Saved(PngHeader(6, 4))));
         Assert.AreEqual("len 766 0000010001002020100000000000E802", Head(Saved(Icon(1, dib))));
         Assert.AreEqual("len 766 0000010001002020100000000000E802", Head(Saved(Icon(2, dib))));
     }
@@ -148,6 +167,80 @@ public sealed class SavedPictureTests
 
         Assert.AreEqual(16, saved[6]);
         Assert.IsTrue(Decoded(saved).Indexes!.Value.ToArray().All(number => number == 15));
+    }
+
+    // a PNG of RGBA pixels, row by row from the top, each as 0xRRGGBBAA, with each row's filter byte (none) first.
+    private static byte[] Rgba(int width, params uint[] pixels)
+    {
+        var height = pixels.Length / width;
+        var rows = new byte[height * (1 + width * 4)];
+        for (var i = 0; i < pixels.Length; i++)
+            BinaryPrimitives.WriteUInt32BigEndian(rows.AsSpan(i / width * (1 + width * 4) + 1 + i % width * 4), pixels[i]);
+        return Png(width, height, 6, 8, rows);
+    }
+
+    // red opaque, blue clear (alpha 0) and green at alpha 128.
+    private static readonly uint[] OpaqueClearPartial = [0xFF0000FF, 0x0000FF00, 0x00FF0080];
+
+    // a 32 by 32 picture whose top rows are OpaqueClearPartial across, and whose other pixels are clear.
+    private static uint[] Pixels32()
+    {
+        var pixels = new uint[32 * 32];
+        for (var y = 0; y < 16; y++)
+            for (var x = 0; x < 30; x++)
+                pixels[y * 32 + x] = OpaqueClearPartial[x % 3];
+        return pixels;
+    }
+
+    // RD-VBA's own, as loading a PNG is: a PNG of 8 bits per channel and color type 6, whatever it was loaded from; here a gray one of 8 bits.
+    [TestMethod]
+    public void APng_IsSavedAsAPngOf8BitsPerChannel_WithItsAlpha()
+    {
+        var saved = Saved(Png(3, 1, 0, 8, [0, 0x10, 0x80, 0xF0]));
+
+        Assert.AreEqual("89504E470D0A1A0A0000000D49484452000000030000000108060000001BE014B4", Convert.ToHexString(saved, 0, 33));
+        Assert.AreEqual("0000000049454E44AE426082", Convert.ToHexString(saved[^12..]));
+        Assert.AreEqual("101010FF808080FFF0F0F0FF", Convert.ToHexString(Decoded(saved).Bgra.Span));
+        Assert.AreEqual((PictureFormat.Png, (short)1), (Loaded(saved).Format, Loaded(saved).Type));
+    }
+
+    // LoadPicture of the PNG, SavePicture, LoadPicture of the file saved, and SavePicture again: each pixel keeps its color and its alpha, and the second file
+    // is the first again.
+    [TestMethod]
+    [DataRow(0, DisplayName = "opaque")]
+    [DataRow(1, DisplayName = "clear")]
+    [DataRow(2, DisplayName = "alpha 128")]
+    public void APngSavedAndLoadedAgain_KeepsEachPixelsAlpha(int pixel)
+    {
+        var png = Rgba(3, OpaqueClearPartial);
+
+        var once = Saved(png);
+        var twice = Saved(once);
+
+        Assert.AreEqual(Convert.ToHexString(Decoded(png).Bgra.Slice(pixel * 4, 4).Span), Convert.ToHexString(Decoded(once).Bgra.Slice(pixel * 4, 4).Span));
+        Assert.AreEqual(Convert.ToHexString(Decoded(png).Bgra.Slice(pixel * 4, 4).Span), Convert.ToHexString(Decoded(twice).Bgra.Slice(pixel * 4, 4).Span));
+        CollectionAssert.AreEqual(once, twice);
+    }
+
+    // RD-VBA's own, as loading it is: an icon or a cursor whose image is a 32 by 32 PNG, saved as an icon of that one image stored as a PNG, which keeps
+    // each pixel's color and alpha, with no AND mask; saved again from that icon, it is the same file.
+    [TestMethod]
+    [DataRow((short)1, DisplayName = "an icon")]
+    [DataRow((short)2, DisplayName = "a cursor")]
+    public void AnIconOrACursorWhoseImageIsAPng_IsSavedAsAnIconOfThatPng_KeepingItsAlpha(short type)
+    {
+        var icon = Icon(type, Rgba(32, Pixels32()));
+
+        var saved = Saved(icon);
+        var again = Saved(saved);
+
+        Assert.AreEqual("0000010001002020000001002000", Convert.ToHexString(saved, 0, 14));
+        Assert.AreEqual(saved.Length - 22, BinaryPrimitives.ReadInt32LittleEndian(saved.AsSpan(14)));
+        Assert.AreEqual(22, BinaryPrimitives.ReadInt32LittleEndian(saved.AsSpan(18)));
+        Assert.AreEqual("89504E470D0A1A0A", Convert.ToHexString(saved, 22, 8));
+        Assert.AreEqual(Convert.ToHexString(Decoded(icon).Bgra.Span), Convert.ToHexString(Decoded(saved).Bgra.Span));
+        Assert.IsNull(Decoded(saved).Mask);
+        CollectionAssert.AreEqual(saved, again);
     }
 
     [TestMethod]
@@ -208,10 +301,67 @@ public sealed class SavedPictureTests
             Convert.ToHexString(Saved(Gif(4, 3, [0x123456, 0xABCDEF], [0, 1, 0, 1, 1, 0, 1, 0, 0, 0, 1, 1], 4, 3))));
     }
 
-    // the same frame at 1,1 on a screen of 6 by 5, its color 1 transparent: the picture is the frame, and the transparent pixels keep their number.
+    // the same frame at 1,1 on a screen of 6 by 5, its color 9 transparent, which none of its pixels is: the picture is the frame, as MS-VBA writes it.
     [TestMethod]
-    public void AGifsFrame_IsSavedAtItsOwnSize_AndItsTransparentColor_AsItsOwnNumber()
-        => Assert.AreEqual(Gray4x3Saved, Convert.ToHexString(Saved(Gif(6, 5, Grays, Pixels4x3, 4, 3, left: 1, top: 1, transparent: 1))));
+    public void AGifsFrame_IsSavedAtItsOwnSize()
+        => Assert.AreEqual(Gray4x3Saved, Convert.ToHexString(Saved(Gif(6, 5, Grays, Pixels4x3, 4, 3, left: 1, top: 1, transparent: 9))));
+
+    // RD-VBA's own, where MS-VBA writes the transparent color as its own number in 4 bits: the same frame, its color 1 transparent, written at 32 bits per
+    // pixel under a BITMAPV5HEADER, its pixels of color 1 clear and the others opaque.
+    [TestMethod]
+    public void AGifWhosePixelsAreItsTransparentColor_IsSavedAt32Bits_ThosePixelsClear()
+    {
+        var gif = Gif(6, 5, Grays, Pixels4x3, 4, 3, left: 1, top: 1, transparent: 1);
+
+        var saved = Saved(gif);
+
+        Assert.AreEqual((124, 4, 3, 32), (BinaryPrimitives.ReadInt32LittleEndian(saved.AsSpan(14)), BinaryPrimitives.ReadInt32LittleEndian(saved.AsSpan(18)),
+            BinaryPrimitives.ReadInt32LittleEndian(saved.AsSpan(22)), (int)BinaryPrimitives.ReadUInt16LittleEndian(saved.AsSpan(28))));
+        Assert.AreEqual("255 0 255 255 255 255 0 255 0 0 255 255", string.Join(" ", Pixels4x3.Select((_, pixel) => Decoded(saved).Bgra.Span[pixel * 4 + 3])));
+        Assert.AreEqual(Convert.ToHexString(Decoded(gif).Bgra.Span), Convert.ToHexString(Decoded(saved).Bgra.Span));
+    }
+
+    // SavePicture keeps the alpha the decoder reads from a picture, and here every color too: the file saved decodes to the pixels the picture decodes to,
+    // alpha included, and saved again from that file, it decodes to them again.
+    [TestMethod]
+    [DataRow("a 32-bit bitmap of BI_RGB, opaque")]
+    [DataRow("an 8-bit bitmap")]
+    [DataRow("a bitmap with an alpha field")]
+    [DataRow("a GIF")]
+    [DataRow("a GIF with a transparent color")]
+    [DataRow("a gray PNG")]
+    [DataRow("a gray PNG with alpha")]
+    [DataRow("a PNG of opaque, clear and partial alpha")]
+    [DataRow("an icon's 24-bit image and its mask")]
+    [DataRow("an icon's 32-bit image of alpha 0 and its mask")]
+    [DataRow("an icon's 32-bit image with alpha")]
+    [DataRow("an icon's PNG image")]
+    [DataRow("a cursor's PNG image")]
+    public void ThePictureSaved_DecodesToThePicturesPixels_AlphaIncluded(string kind)
+    {
+        var picture = kind switch
+        {
+            "a 32-bit bitmap of BI_RGB, opaque" => Bitmap(2, 1, 32, 0, [], [1, 2, 3, 4, 5, 6, 7, 8]),
+            "an 8-bit bitmap" => Bitmap(3, 2, 8, 0, [0x112233, 0x445566], [1, 0, 1, 0, 0, 1, 0, 0], used: 2),
+            "a bitmap with an alpha field" => Bitmap(3, 1, 32, 6, [0xFF0000, 0xFF00, 0xFF, 0xFF000000], Convert.FromHexString("0000FFFFFF00000000FF0080")),
+            "a GIF" => Gif(4, 3, Grays, Pixels4x3, 4, 3),
+            "a GIF with a transparent color" => Gif(4, 3, Grays, Pixels4x3, 4, 3, transparent: 2),
+            "a gray PNG" => Png(3, 1, 0, 8, [0, 0x10, 0x80, 0xF0]),
+            "a gray PNG with alpha" => Png(2, 1, 4, 8, [0, 0x40, 0x00, 0xC0, 0x80]),
+            "a PNG of opaque, clear and partial alpha" => Rgba(3, OpaqueClearPartial),
+            "an icon's 24-bit image and its mask" => Icon(1, IconDib(2, 1, 24, [], [255, 255, 255, 0, 0, 0, 0, 0], [0x40, 0, 0, 0])),
+            "an icon's 32-bit image of alpha 0 and its mask" => Icon32((_, _) => 0x00FF00, (x, y) => (x / 4 + y / 4) % 2 == 1),
+            "an icon's 32-bit image with alpha" => Icon32((x, y) => (x < 16 ? 0u : y < 16 ? 128u : 255u) << 24 | 0xFF0000, (_, y) => y == 31),
+            "an icon's PNG image" => Icon(1, Rgba(32, Pixels32())),
+            "a cursor's PNG image" => Icon(2, Rgba(32, Pixels32())),
+            _ => throw new AssertFailedException(kind),
+        };
+
+        var once = Saved(picture);
+
+        Assert.AreEqual(Convert.ToHexString(Decoded(picture).Bgra.Span), Convert.ToHexString(Decoded(once).Bgra.Span));
+        Assert.AreEqual(Convert.ToHexString(Decoded(picture).Bgra.Span), Convert.ToHexString(Decoded(Saved(once)).Bgra.Span));
+    }
 
     // a local table of red, lime, blue and yellow: the standard colors it lacks fill its table.
     [TestMethod]
@@ -265,14 +415,27 @@ public sealed class SavedPictureTests
         Assert.IsTrue(mask.All(row => row == "00000000"), string.Join(" ", mask));
     }
 
-    // a 32-bit image of red whose alpha is 0 on the left, 128 top right and 255 bottom right, its mask clear: the mask is the image's, whatever its alpha.
+    // RD-VBA's own, where MS-VBA writes the 16 colors: an icon's or a cursor's 32-bit image of red whose alpha is 0 on the left, 128 top right and 255 bottom
+    // right, its mask set on the bottom row only, saved as an icon of that image at 32 bits per pixel, each pixel's color and alpha kept, with the image's
+    // own mask; saved again from that icon, it is the same file.
     [TestMethod]
-    public void AnIconsMask_IsItsImagesMask_WhateverItsAlpha()
+    [DataRow((short)1, DisplayName = "an icon")]
+    [DataRow((short)2, DisplayName = "a cursor")]
+    public void A32BitIconImageWhoseAlphaIsItsOwn_IsSavedAt32Bits_WithItsAlphaAndItsMask(short type)
     {
-        var (_, colors, mask) = IconParts(Saved(Icon32((x, y) => (x < 16 ? 0u : y < 16 ? 128u : 255u) << 24 | 0xFF0000, (_, _) => false)));
+        var icon = Icon32((x, y) => (x < 16 ? 0u : y < 16 ? 128u : 255u) << 24 | 0xFF0000, (_, y) => y == 31, type);
 
-        Assert.IsTrue(colors.All(row => row == new string('9', 32)), string.Join(" ", colors));
-        Assert.IsTrue(mask.All(row => row == "00000000"), string.Join(" ", mask));
+        var saved = Saved(icon);
+        var again = Saved(saved);
+
+        Assert.AreEqual(22 + 40 + 32 * 32 * 4 + 32 * 4, saved.Length);
+        Assert.AreEqual("0000010001002020000001002000", Convert.ToHexString(saved, 0, 14));
+        Assert.AreEqual((32, 1, 0), ((int)BinaryPrimitives.ReadUInt16LittleEndian(saved.AsSpan(22 + 14)), (int)BinaryPrimitives.ReadUInt16LittleEndian(saved.AsSpan(22 + 12)),
+            BinaryPrimitives.ReadInt32LittleEndian(saved.AsSpan(22 + 16))));
+        Assert.AreEqual(Convert.ToHexString(Decoded(icon).Bgra.Span), Convert.ToHexString(Decoded(saved).Bgra.Span));
+        Assert.AreEqual("0000FF00 0000FF80 0000FFFF", string.Join(" ", new[] { 0, 16, 31 * 32 + 16 }.Select(pixel => Convert.ToHexString(Decoded(saved).Bgra.Slice(pixel * 4, 4).Span))));
+        CollectionAssert.AreEqual(Decoded(icon).Mask!.Value.ToArray(), Decoded(saved).Mask!.Value.ToArray());
+        CollectionAssert.AreEqual(saved, again);
     }
 
     // a 32-bit image of lime, alpha 0, its mask set on a checkerboard of 4-pixel squares: the mask is kept, and the pixels it is set for keep their color.

@@ -199,7 +199,8 @@ internal static class BitmapDecoder
 
         if (!icon)
         {
-            return new DecodedPicture(width, height, bgra, palette, indexes, isComplete: complete);
+            // a bitmap's alpha is its own only where its bit fields state an alpha field.
+            return new DecodedPicture(width, height, bgra, palette, indexes, isComplete: complete, hasAlphaChannel: alpha != 0);
         }
 
         // the AND mask under the image: 1 bit a pixel, its rows padded to 4 bytes, in the image's order. Where a 32-bit image's alpha is not all 0, it is the
@@ -239,7 +240,7 @@ internal static class BitmapDecoder
             }
         }
 
-        return new DecodedPicture(width, height, bgra, palette, indexes, mask: mask, isComplete: complete);
+        return new DecodedPicture(width, height, bgra, palette, indexes, mask: mask, isComplete: complete, hasAlphaChannel: hasAlpha);
     }
 
     // a pixel of 16 or 32 bits, through its bit fields, each scaled to 8 bits. With no alpha field, the pixel is opaque; a 32-bit icon image's fourth byte is

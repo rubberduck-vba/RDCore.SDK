@@ -67,15 +67,18 @@ internal static class GifDecoder
         }
 
         var bgra = new byte[width * height * 4];
+        var clear = false;
         for (var i = 0; i < indexes.Length; i++)
         {
             if (given[i])
             {
+                clear |= indexes[i] == transparent;
                 PictureDecoder.Put(bgra, i, indexes[i] == transparent ? 0 : indexes[i] < palette.Length ? palette[indexes[i]] : 0xFF000000);
             }
         }
 
-        return new DecodedPicture(width, height, bgra, palette, indexes, transparent, isComplete: complete);
+        // a GIF's alpha is its own where one of its pixels is its transparent color.
+        return new DecodedPicture(width, height, bgra, palette, indexes, transparent, isComplete: complete, hasAlphaChannel: clear);
     }
 
     // a color table of 2 to the power of the flags' low 3 bits plus 1 entries, 3 bytes each; an entry past the end of the bytes is black.

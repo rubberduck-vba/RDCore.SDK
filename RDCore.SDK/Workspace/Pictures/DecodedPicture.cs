@@ -19,8 +19,9 @@ namespace RDCore.SDK.Workspace.Pictures;
 public sealed class DecodedPicture
 {
     internal DecodedPicture(int width, int height, byte[] bgra, ImmutableArray<uint> palette = default, byte[]? indexes = null, int transparentIndex = -1,
-        byte[]? mask = null, bool isComplete = true)
+        byte[]? mask = null, bool isComplete = true, bool hasAlphaChannel = false)
     {
+        HasAlphaChannel = hasAlphaChannel;
         Width = width;
         Height = height;
         Bgra = bgra;
@@ -74,4 +75,9 @@ public sealed class DecodedPicture
     /// Whether the file gave every pixel; <see langword="false"/> where its body was cut short or could not be read to its end.
     /// </summary>
     public bool IsComplete { get; }
+
+    // a bitmap whose bit fields state an alpha field, a 32-bit icon image whose alpha is not all 0, or a GIF one of whose pixels is its transparent color:
+    // its alpha is its own, which a bitmap of 24 bits or fewer, or an icon of 16 colors and a mask, would lose. Set by the bitmap and GIF decoders; a PNG is
+    // always written with its alpha.
+    internal bool HasAlphaChannel { get; }
 }
