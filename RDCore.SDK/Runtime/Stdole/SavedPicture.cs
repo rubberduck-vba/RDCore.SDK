@@ -17,7 +17,7 @@ namespace RDCore.SDK.Runtime.Stdole;
 /// compression skips is color number 0.</description></item>
 /// <item><term>A bitmap whose bit fields state an alpha field</term><description>Where a pixel's alpha is not 255, a bitmap of 32 bits per pixel that keeps
 /// each pixel's alpha, not premultiplied, under a <c>BITMAPV5HEADER</c> whose bit fields state the alpha: RD-VBA addition, where MS-VBA writes it at 24
-/// bits, its alpha left out. Where every pixel is opaque, as a compressed bitmap.</description></item>
+/// bits, its alpha left out. Where every pixel is opaque, it is written as a compressed bitmap is.</description></item>
 /// <item><term>A GIF</term><description>A bitmap of its first frame's size and color numbers, at the least of 1, 4 and 8 bits per pixel that numbers its
 /// color table, with that table filled as <see cref="PictureWriter.WriteBitmap"/> fills it. A GIF one of whose pixels is its transparent color is written
 /// as a bitmap of 32 bits per pixel instead, as a bitmap with an alpha field is, those pixels clear. RD-VBA addition: MS-VBA writes the transparent color as
@@ -26,8 +26,8 @@ namespace RDCore.SDK.Runtime.Stdole;
 /// the depth and color type it was loaded at. RD-VBA addition: MS-VBA does not load a PNG.</description></item>
 /// <item><term>An icon, a cursor</term><description>An icon of one image, the one the picture holds (<see cref="StdPictureObject.Image"/>), written by
 /// <see cref="PictureWriter.WriteIcon(DecodedPicture)"/>: 4 bits per pixel in <see cref="PictureWriter.IconColors"/>, and its AND mask. A cursor is written
-/// as an icon. An image whose alpha its mask does not give keeps it, an RD-VBA addition where MS-VBA writes the 16 colors and the mask: an image stored as
-/// a PNG is written by <see cref="PictureWriter.WritePngIcon"/>, as a PNG; a 32-bit image with a pixel whose alpha is neither 0 where the mask is set nor
+/// as an icon. An image with an alpha that its mask does not give keeps that alpha, an RD-VBA addition where MS-VBA writes the 16 colors and the mask:
+/// an image stored as a PNG is written by <see cref="PictureWriter.WritePngIcon"/>, as a PNG; a 32-bit image with a pixel whose alpha is neither 0 where the mask is set nor
 /// 255 where it is clear, by <see cref="PictureWriter.WriteIcon(DecodedPicture, int)"/>, at 32 bits per pixel with its own AND mask. Any other image has
 /// its transparency in its mask (a 32-bit image whose alpha is all 0 included), and is written in the 16 colors.</description></item>
 /// <item><term>A JPEG</term><description>A bitmap of 24 bits per pixel. A JPEG of a kind that is not decoded
@@ -84,7 +84,7 @@ public static class SavedPicture
     /// The file's bytes, as <see cref="BytesOf"/> gives them, when the result is <see cref="SavedPictureFailure.None"/>; <see langword="null"/> otherwise.
     /// </param>
     /// <returns>
-    /// <see cref="SavedPictureFailure.None"/> when there is a file to write, no bytes for an object made by <c>New StdPicture</c> included;
+    /// <see cref="SavedPictureFailure.None"/> when there is a file to write, including the file of no bytes for an object made by <c>New StdPicture</c>;
     /// <see cref="SavedPictureFailure.NoPicture"/> for an object that holds no picture otherwise; <see cref="SavedPictureFailure.NotDecoded"/> for a
     /// picture whose pixels are not decoded.
     /// </returns>
