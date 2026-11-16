@@ -92,9 +92,12 @@ public static class CompiledPlatformProfiles
 /// several statements declare, each on some platforms, it calls on each platform the library of that platform's statement.
 /// </remarks>
 /// <param name="Call">The platforms the call is compiled on: those that make live the <c>#If</c> branch the call is written in.</param>
-/// <param name="Declared">The platforms the procedure is declared on (<see cref="DeclarationFact.CompiledOn"/>): the union of <paramref name="DeclaredByStatement"/>.</param>
+/// <param name="Declared">
+/// The platforms the procedure is declared on (<see cref="DeclarationFact.CompiledOn"/>): the union of <paramref name="DeclaredByStatement"/>.
+/// </param>
 /// <param name="DeclaredByStatement">
-/// The platforms each <c>Declare</c> statement of the procedure is compiled on, in the order they are written (<see cref="DeclarationFact.StatementsCompiledOn"/>).
+/// The platforms each <c>Declare</c> statement of the procedure is compiled on, in the order they are written
+/// (<see cref="DeclarationFact.StatementsCompiledOn"/>).
 /// </param>
 public readonly record struct NativeCallPlatforms(CompiledPlatforms Call, CompiledPlatforms Declared, ImmutableArray<CompiledPlatforms> DeclaredByStatement)
 {
