@@ -1,5 +1,6 @@
 using RDCore.SDK.Runtime;
 using RDCore.SDK.Runtime.Abstract.Execution;
+using System.Collections.Immutable;
 
 namespace RDCore.SDK.Semantics;
 
@@ -86,9 +87,42 @@ public static class CompiledPlatformProfiles
 /// the procedure it calls is.
 /// </summary>
 /// <remarks>
-/// A call that is compiled on a platform its procedure is not declared on refers to nothing there; one compiled on every platform, of a procedure declared
-/// on every platform, calls the same library whatever the platform, and no library is on every platform.
+/// A call that is compiled on a platform its procedure is not declared on refers to nothing there. One compiled on every platform, of a procedure that one
+/// statement declares on every platform, calls that statement's library whatever the platform, and no library is on every platform; of a procedure that
+/// several statements declare, each on some platforms, it calls on each platform the library of that platform's statement.
 /// </remarks>
 /// <param name="Call">The platforms the call is compiled on: those that make live the <c>#If</c> branch the call is written in.</param>
-/// <param name="Declared">The platforms the procedure is declared on (<see cref="DeclarationFact.CompiledOn"/> of its <c>Declare</c> statement).</param>
-public readonly record struct NativeCallPlatforms(CompiledPlatforms Call, CompiledPlatforms Declared);
+/// <param name="Declared">The platforms the procedure is declared on (<see cref="DeclarationFact.CompiledOn"/>): the union of <paramref name="DeclaredByStatement"/>.</param>
+/// <param name="DeclaredByStatement">
+/// The platforms each <c>Declare</c> statement of the procedure is compiled on, in the order they are written (<see cref="DeclarationFact.StatementsCompiledOn"/>).
+/// </param>
+public readonly record struct NativeCallPlatforms(CompiledPlatforms Call, CompiledPlatforms Declared, ImmutableArray<CompiledPlatforms> DeclaredByStatement)
+{
+    /// <summary>
+    /// The platforms each <c>Declare</c> statement of the procedure is compiled on, in the order they are written: empty when none is given.
+    /// </summary>
+    public ImmutableArray<CompiledPlatforms> DeclaredByStatement { get; init; } = DeclaredByStatement.IsDefault ? [] : DeclaredByStatement;
+
+    /// <summary>
+    /// Whether <paramref name="other"/> states the same platforms: the same call, the same union, and the same platforms for each statement, in order.
+    /// </summary>
+    /// <param name="other">The platforms of a call.</param>
+    public bool Equals(NativeCallPlatforms other)
+        => Call == other.Call && Declared == other.Declared && DeclaredByStatement.AsSpan().SequenceEqual(other.DeclaredByStatement.AsSpan());
+
+    /// <summary>
+    /// A hash of the call's platforms, the union's, and each statement's, as <see cref="Equals(NativeCallPlatforms)"/> compares them.
+    /// </summary>
+    public override int GetHashCode()
+    {
+        var hash = new HashCode();
+        hash.Add(Call);
+        hash.Add(Declared);
+        foreach (var platforms in DeclaredByStatement.AsSpan())
+        {
+            hash.Add(platforms);
+        }
+
+        return hash.ToHashCode();
+    }
+}
