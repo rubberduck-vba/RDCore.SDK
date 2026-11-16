@@ -386,11 +386,15 @@ public record class ProcedureSemanticsDto(
 /// For a procedure a <c>Declare</c> statement declares, the platforms it is declared on (<see cref="DeclarationFact.CompiledOn"/>); <see langword="null"/>
 /// for any other declaration.
 /// </param>
+/// <param name="StatementsCompiledOn">
+/// For a procedure a <c>Declare</c> statement declares, the platforms each of its statements is compiled on, in the order they are written
+/// (<see cref="DeclarationFact.StatementsCompiledOn"/>); <see langword="null"/> for any other declaration.
+/// </param>
 public record class DeclarationFactDto(
     Uri Symbol, string Name, DeclarationKind Kind, AccessModifier Access, bool IsImplicit, SourceLocation Location, DeclarationReferences? References,
     DeclarationRole Role = DeclarationRole.None, LocalDeclarationKind? DeclaredBy = null, HiddenDeclaration? Hides = null,
     ImmutableArray<DeclarationReference>? ReferencedFrom = null, DeclaredTypeKind? TypeKind = null, bool IsArray = false, Uri? AutoInstantiates = null,
-    CompiledPlatforms? CompiledOn = null);
+    CompiledPlatforms? CompiledOn = null, ImmutableArray<CompiledPlatforms>? StatementsCompiledOn = null);
 
 /// <summary>
 /// A <see cref="ModuleSemanticModel"/>, as it travels.
@@ -442,7 +446,7 @@ public record class ModuleSemanticsDto(
         [.. model.Declarations.Select(declaration => new DeclarationFactDto(
             declaration.Symbol.Uri, declaration.Name, declaration.Kind, declaration.Access, declaration.IsImplicit, declaration.Location, declaration.References, declaration.Role,
             declaration.DeclaredBy, declaration.Hides, declaration.ReferencedFrom, declaration.TypeKind, declaration.IsArray,
-            declaration.AutoInstantiates?.Uri, declaration.CompiledOn))],
+            declaration.AutoInstantiates?.Uri, declaration.CompiledOn, declaration.StatementsCompiledOn.IsDefault ? null : declaration.StatementsCompiledOn))],
         model.Language,
         model.Class,
         model.Document,

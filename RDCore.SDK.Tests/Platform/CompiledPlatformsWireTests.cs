@@ -41,9 +41,58 @@ public sealed class CompiledPlatformsWireTests
     [TestMethod]
     public void ThePlatformsOfANativeCall_AreReadBackAsTheyWereWritten()
     {
-        var written = new NativeCallPlatforms(CompiledPlatforms.All, CompiledPlatforms.Windows32 | CompiledPlatforms.Windows64);
+        var written = new NativeCallPlatforms(CompiledPlatforms.All, CompiledPlatforms.All, [CompiledPlatforms.MacOS, ~CompiledPlatforms.MacOS & CompiledPlatforms.All]);
 
-        Assert.AreEqual(written, PlatformJson.Deserialize<ExpressionFactDto>(PlatformJson.Serialize(Call(written))).NativeCall);
+        var read = PlatformJson.Deserialize<ExpressionFactDto>(PlatformJson.Serialize(Call(written))).NativeCall;
+
+        Assert.AreEqual(written, read);
+        CollectionAssert.AreEqual(written.DeclaredByStatement.ToArray(), read!.Value.DeclaredByStatement.ToArray());
+    }
+
+    [TestMethod]
+    public void ThePlatformsOfTwoCalls_AreEqual_WhenTheyStateTheSamePlatformsForEachStatement()
+    {
+        var one = new NativeCallPlatforms(CompiledPlatforms.All, CompiledPlatforms.All, [CompiledPlatforms.MacOS, CompiledPlatforms.Windows64]);
+        var other = new NativeCallPlatforms(CompiledPlatforms.All, CompiledPlatforms.All, [CompiledPlatforms.MacOS, CompiledPlatforms.Windows64]);
+
+        Assert.AreEqual(one, other);
+        Assert.AreEqual(one.GetHashCode(), other.GetHashCode());
+        Assert.AreNotEqual(one, other with { DeclaredByStatement = [CompiledPlatforms.Windows64, CompiledPlatforms.MacOS] }, "in the order they are written");
+    }
+
+    [TestMethod]
+    public void ACallGivenNoStatements_HasNone()
+    {
+        var call = new NativeCallPlatforms(CompiledPlatforms.All, CompiledPlatforms.All, default);
+
+        Assert.IsEmpty(call.DeclaredByStatement);
+        Assert.AreEqual(new NativeCallPlatforms(CompiledPlatforms.All, CompiledPlatforms.All, []), call);
+    }
+
+    [TestMethod]
+    public void TheStatementsOfADeclare_AreReadBackAsTheyWereWritten_InOrder()
+    {
+        var declaration = new DeclarationFact(new SemanticId(new Uri("file:///c:/ws/Module1.bas#Module1.Ticks")), "Ticks", DeclarationKind.Procedure,
+            AccessModifier.Private, false, new SourceLocation(Module, new SourceRange(2, 0, 2, 60)), null)
+        {
+            CompiledOn = CompiledPlatforms.All,
+            StatementsCompiledOn = [CompiledPlatforms.MacOS, CompiledPlatforms.Windows32 | CompiledPlatforms.Windows64 | CompiledPlatforms.Linux32 | CompiledPlatforms.Linux64],
+        };
+
+        var read = PlatformJson.Deserialize<SemanticsPayload>(PlatformJson.Serialize(new SemanticsPayload([ModuleSemanticsDto.From(new ModuleSemanticModel(Module, [], []) { Declarations = [declaration] })])));
+
+        CollectionAssert.AreEqual(declaration.StatementsCompiledOn.ToArray(), read.Modules.Single().Declarations.Single().StatementsCompiledOn!.Value.ToArray());
+    }
+
+    [TestMethod]
+    public void ADeclarationThatIsNoDeclare_HasNoStatementPlatforms_OnTheWire()
+    {
+        var declaration = new DeclarationFact(new SemanticId(new Uri("file:///c:/ws/Module1.bas#Module1.x")), "x", DeclarationKind.Variable,
+            AccessModifier.Private, false, new SourceLocation(Module, new SourceRange(2, 0, 2, 10)), null);
+
+        var read = PlatformJson.Deserialize<SemanticsPayload>(PlatformJson.Serialize(new SemanticsPayload([ModuleSemanticsDto.From(new ModuleSemanticModel(Module, [], []) { Declarations = [declaration] })])));
+
+        Assert.IsNull(read.Modules.Single().Declarations.Single().StatementsCompiledOn);
     }
 
     [TestMethod]
