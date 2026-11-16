@@ -39,6 +39,11 @@ public sealed record class VBProjectSymbol(Uri WorkspaceRoot, string Name)
     /// is a module, <paramref name="name"/> is a <c>Type</c> or an <c>Enum</c> of that module (<strong>MS-VBAL §5.6.12</strong>). A qualifier that
     /// resolves to neither a project nor a module stays unbound.
     /// </remarks>
+    /// <param name="resolver">The resolver names are bound by.</param>
+    /// <param name="qualifier">The qualifier, a project's or a module's name; <see langword="null"/> for a bare name.</param>
+    /// <param name="name">The name of the type.</param>
+    /// <param name="handle">The address of the symbol whose scope a bare name, and the qualifier, are bound from.</param>
+    /// <returns>The type, or <see cref="SymbolResolutionResult.Unbound"/>.</returns>
     public static SymbolResolutionResult ResolveQualifiedType(ISymbolResolver resolver, string? qualifier, string name, Uri handle)
     {
         if (qualifier is null)

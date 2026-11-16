@@ -32,6 +32,8 @@ public record class VBClassType(VBClassModuleSymbol Symbol, ImmutableArray<VBTyp
     /// the class of an object each time it Set-coerces the object or calls its default member: the type is built once for each class module symbol,
     /// which is immutable, and the same type is returned for it every time.
     /// </remarks>
+    /// <param name="classModule">The class module.</param>
+    /// <returns>The class's type.</returns>
     public static VBClassType FromClassModule(VBClassModuleSymbol classModule)
         => Built.GetValue(classModule, static symbol => FromClassModule(symbol, [symbol.Uri.AbsoluteUri]));
 
