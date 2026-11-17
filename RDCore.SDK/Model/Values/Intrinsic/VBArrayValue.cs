@@ -184,7 +184,8 @@ public abstract record class VBArrayValue : VBTypedValue
     /// </remarks>
     public void ResetElements()
     {
-        // an element whose cell is not made holds the default, which is then known, as a cell written the default is; a record's cell is not written, but its fields.
+        // an element whose cell is not made holds the default, which is then known, as a cell written the default is; a record's cell is not written, but
+        // its fields.
         if (ItemType is not VBUserDefinedType)
         {
             _store.Unmade = UnmadeKnowledge.Known;
@@ -448,8 +449,8 @@ public abstract record class VBArrayValue : VBTypedValue
     /// </para>
     /// <para>
     /// The walk is deferred: it reads each element when it reaches it. A cell made or replaced at an index the walk has not reached yet is the one it
-    /// yields. One made or replaced at an index it has passed is not yielded. A walk whose first step finds no cell yields none, whatever cells are made
-    /// while it runs.
+    /// yields. One made or replaced at an index it has passed is not yielded. When no cell is made as the walk starts (its first step), it yields none,
+    /// whatever cells are made while it runs.
     /// </para>
     /// </remarks>
     public IEnumerable<(int FlatIndex, IBindingHandle Cell)> MadeCells
