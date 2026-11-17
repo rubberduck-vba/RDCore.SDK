@@ -262,6 +262,21 @@ public sealed class ProjectFileTests
     }
 
     [TestMethod]
+    [DataRow(true, DisplayName = "a section")]
+    [DataRow(false, DisplayName = "no section")]
+    public void WithMake_SetsItWithDirtyFlag(bool section)
+    {
+        var make = section ? new ProjectMake { Title = "Naval", Major = 2 } : null;
+        var sut = new ProjectFile(TestWorkspaceUri, new RDCoreProject { Name = "P", Make = new ProjectMake { Title = "Before" } });
+
+        var result = sut.WithMake(make);
+
+        Assert.IsTrue(result.IsDirty, "IsDirty flag was not set");
+        Assert.AreEqual(make, result.ProjectInfo.Make);
+        Assert.AreEqual("P", result.ProjectInfo.Name, "the rest of the project is as it was");
+    }
+
+    [TestMethod]
     public void PrecompilerConstants_RoundTripThroughRdprojJson()
     {
         var sut = new ProjectFile(TestWorkspaceUri, new RDCoreProject
