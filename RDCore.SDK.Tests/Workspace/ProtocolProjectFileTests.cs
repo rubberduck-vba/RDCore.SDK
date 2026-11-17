@@ -211,7 +211,7 @@ public sealed class ProtocolProjectFileTests
         Assert.IsNull(System.Text.Json.Nodes.JsonNode.Parse(JsonSerializer.Serialize(new RDCoreProject { Name = "P" }))!["build"]);
     }
 
-    // a file of the format 1.0 that has a build section - a member it did not know - reads it, and is stamped with this format when it is written.
+    // a file of the format 1.0 that has a build section, a member that format did not know, reads it, and is stamped with this format when it is written.
     [TestMethod]
     public async Task AFileOfTheFormatBeforeTheBuildSection_ReadsItsSection_AndIsWrittenInThisFormat()
     {
@@ -271,7 +271,7 @@ public sealed class ProtocolProjectFileTests
         Assert.AreEqual(ProjectFile.SchemaVersion, read.Version);
     }
 
-    // a file of the format 1.1, which has no KeepSystemTheme, loads with the light colours, and is written in this format without the member.
+    // a file of the format 1.1, which has no KeepSystemTheme, loads with the light colors, and is written in this format without the member.
     [TestMethod]
     public async Task AFileOfTheFormatBeforeKeepSystemTheme_ReadsItAsNotSet_AndIsWrittenInThisFormat()
     {
