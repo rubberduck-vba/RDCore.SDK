@@ -16,8 +16,8 @@ namespace RDCore.Tests.Formatting;
 /// </summary>
 /// <remarks>
 /// The modules are procedures of four lines each (<c>Public Sub Pn()</c>, two <c>Beep</c> lines, <c>End Sub</c>), parsed by a small reader of their own
-/// lines: a statement is a keyword statement, an <c>If x Then</c> without its <c>End If</c> is a block of its own line, and a directive is in no node, as the
-/// parser has it.
+/// lines: a statement is a keyword statement, a block (<c>If x Then</c>, <c>For i = 1 To 3</c>, <c>Do While x</c>, <c>With x</c>, <c>Select Case x</c>)
+/// without its closer is a block of its own line, and a directive is in no node, as the parser has it.
 /// </remarks>
 [TestClass]
 public sealed class ModuleBlocksWorkTests
@@ -60,13 +60,19 @@ public sealed class ModuleBlocksWorkTests
         return (string.Join("\r\n", lines) + "\r\n", line);
     }
 
+    // the openers of the blocks these tests write, each with its closer.
+    private static readonly Dictionary<string, string> Closers = new(StringComparer.Ordinal)
+    {
+        ["If x Then"] = "End If", ["For i = 1 To 3"] = "Next", ["Do While x"] = "Loop", ["With x"] = "End With", ["Select Case x"] = "End Select",
+    };
+
     // what the parser has of the modules of these tests.
     private static ModuleParseResult Parse(string text)
     {
         var lines = text.Split("\r\n");
         var top = new List<SyntaxNode>();
         (int Line, string Name, List<SyntaxNode> Body)? member = null;
-        var blocks = new Stack<(int Line, List<SyntaxNode> Body)>();
+        var blocks = new Stack<(int Line, string Opener, List<SyntaxNode> Body)>();
         void Add(SyntaxNode node)
         {
             if (blocks.TryPeek(out var block))
@@ -83,12 +89,12 @@ public sealed class ModuleBlocksWorkTests
             }
         }
 
-        // an If the parser found no End If of is a block of its own line, the statements after it the procedure's.
-        void CutShort()
+        // a block the parser found no closer of is a block of its own line, the statements after it those of the block around it.
+        void CutShort(int left = 0)
         {
-            while (blocks.TryPop(out var block))
+            while (blocks.Count > left && blocks.TryPop(out var block))
             {
-                Add(If(block.Line, block.Line, []));
+                Add(Block(block.Opener, block.Line, block.Line, []));
                 foreach (var node in block.Body)
                 {
                     Add(node);
@@ -110,13 +116,16 @@ public sealed class ModuleBlocksWorkTests
                 top.Add(new MemberDeclarationNode(Id(), At(procedure.Line, 0, line, lines[line].Length), [.. procedure.Body], procedure.Name, MemberKind.Procedure));
                 member = null;
             }
-            else if (code == "If x Then")
+            else if (Closers.ContainsKey(code))
             {
-                blocks.Push((line, new List<SyntaxNode>()));
+                blocks.Push((line, code, new List<SyntaxNode>()));
             }
-            else if (code == "End If" && blocks.TryPop(out var block))
+            else if (blocks.Select(block => Closers[block.Opener]).ToList().IndexOf(code) is >= 0 and var depth)
             {
-                Add(If(block.Line, line, block.Body));
+                // a closer closes the innermost block it is the closer of: the blocks in that one have none.
+                CutShort(blocks.Count - depth);
+                var block = blocks.Pop();
+                Add(Block(block.Opener, block.Line, line, block.Body));
             }
             else if (code.Length > 0 && !code.StartsWith('#'))
             {
@@ -136,8 +145,26 @@ public sealed class ModuleBlocksWorkTests
                 [.. top]),
         };
 
-        IfBlockStatementNode If(int start, int end, List<SyntaxNode> body)
-            => new(Id(), At(start, 4, end, lines[end].Length), new SimpleNameExpressionNode(Id(), At(start, 7, start, 8), "x"), new StatementBlock([.. body]), [], null);
+        // the block an opener starts, from its line to the line of its closer; its expressions are names, at where they are written.
+        StatementNode Block(string opener, int start, int end, List<SyntaxNode> body)
+        {
+            var location = At(start, lines[start].Length - lines[start].TrimStart().Length, end, lines[end].Length);
+            var statements = new StatementBlock([.. body]);
+            ExpressionNode Name(string name)
+            {
+                var at = lines[start].IndexOf(name, location.Range.Start.Character, StringComparison.Ordinal);
+                return new SimpleNameExpressionNode(Id(), At(start, at, start, at + name.Length), name);
+            }
+
+            return opener switch
+            {
+                "If x Then" => new IfBlockStatementNode(Id(), location, Name("x"), statements, [], null),
+                "For i = 1 To 3" => new ForStatementNode(Id(), location, Name("i"), Name("1"), Name("3"), null, statements),
+                "Do While x" => new DoWhileLoopStatementNode(Id(), location, Name("x"), statements),
+                "With x" => new WithStatementNode(Id(), location, Name("x"), statements),
+                _ => new SelectCaseStatementNode(Id(), location, Name("x"), [], null),
+            };
+        }
     }
 
     private static Task<ModuleParseResult> NotParsedAsync(string text, CancellationToken token)
@@ -246,5 +273,41 @@ public sealed class ModuleBlocksWorkTests
 
         Assert.IsGreaterThan(0, walked[0], "the procedure's nodes are walked");
         CollectionAssert.AreEqual(Enumerable.Repeat(walked[0], walked.Count).ToArray(), walked.ToArray(), "the same nodes in every module");
+    }
+
+    // a module whose last procedure ends it, with no line end after its End Sub: the procedure before it, then that one, written as its lines say.
+    private const string Before = "Public Sub P0()\r\n    Beep\r\nEnd Sub\r\n";
+
+    [TestMethod]
+    [DataRow("    If x Then", "        ", "    End If", DisplayName = "an If block gets its End If")]
+    [DataRow("    Select Case x", "    ", "    End Select", DisplayName = "a Select Case gets its End Select, the new line where its Case goes")]
+    [DataRow("    For i = 1 To 3", "        ", "    Next", DisplayName = "a For loop gets its Next")]
+    [DataRow("    Do While x", "        ", "    Loop", DisplayName = "a Do loop gets its Loop")]
+    [DataRow("    With x", "        ", "    End With", DisplayName = "a With block gets its End With")]
+    public async Task ALineBreakAfterAnOpener_InAProcedureThatEndsTheModuleWithNoLineEnd_ClosesTheBlock(string opener, string indented, string closer)
+    {
+        var text = Before + $"Public Sub P1()\r\n{opener}\r\n\r\nEnd Sub";
+        var parsed = new List<string>();
+
+        var edits = await ModuleBlocks.OnLineBreakAsync(Parse(text), text, 5, Options, (closed, _) =>
+        {
+            parsed.Add(closed);
+            return Task.FromResult(Parse(closed));
+        });
+
+        CollectionAssert.AreEqual(new[] { $"Public Sub P1()\r\n{opener}\r\n\r\n{closer}\r\nEnd Sub" }, parsed,
+            "the procedure is parsed again with the closer in it, and ends as the module does");
+        CollectionAssert.AreEqual(new[] { $"5:0-5:0 '{indented}'", $"6:0-6:0 '{closer}\r\n'" }, Shown(edits));
+        Assert.AreEqual(5, ModuleIndenter.LinesIndented, "the procedure's lines, the closer's with them, are indented, and no other");
+    }
+
+    [TestMethod]
+    public async Task ALineBreakAfterAnOpenerInABlock_InAProcedureThatEndsTheModuleWithNoLineEnd_ClosesItAtItsOwnLevel()
+    {
+        var text = Before + "Public Sub P1()\r\n    If x Then\r\n        For i = 1 To 3\r\n\r\n    End If\r\nEnd Sub";
+
+        var edits = await ModuleBlocks.OnLineBreakAsync(Parse(text), text, 6, Options, (closed, _) => Task.FromResult(Parse(closed)));
+
+        CollectionAssert.AreEqual(new[] { "6:0-6:0 '            '", "7:0-7:0 '        Next\r\n'" }, Shown(edits));
     }
 }

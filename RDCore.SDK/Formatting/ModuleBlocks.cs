@@ -141,9 +141,11 @@ public static class ModuleBlocks
         var inserted = line + 1 < lines.Length
             ? (At: new Range(line + 1, 0, line + 1, 0), Text: written + ends[line])
             : (At: new Range(line, lines[line].Length, line, lines[line].Length), Text: ends[line - 1] + written);
+        // the module's last line has no line end: a procedure whose closer is that line ends without one.
+        string Written(int index) => index < ends.Length ? lines[index] + ends[index] : lines[index];
         var (first, closed) = procedure is { } scope
-            ? (scope.First, string.Concat(Enumerable.Range(scope.First, line + 1 - scope.First).Select(index => lines[index] + ends[index]))
-                + inserted.Text + string.Concat(Enumerable.Range(line + 1, scope.Last - line).Select(index => lines[index] + ends[index])))
+            ? (scope.First, string.Concat(Enumerable.Range(scope.First, line + 1 - scope.First).Select(Written))
+                + inserted.Text + string.Concat(Enumerable.Range(line + 1, scope.Last - line).Select(Written)))
             : (0, text.Insert(Enumerable.Range(0, inserted.At.Start.Line).Sum(index => lines[index].Length + ends[index].Length) + inserted.At.Start.Character,
                 inserted.Text));
         var closedLines = ModuleIndenter.LinesIn(closed);
