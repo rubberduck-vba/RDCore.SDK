@@ -429,7 +429,7 @@ public record class RDCoreProject
 
     /// <summary>
     /// The project's <c>Make</c> section: the program's title, its version and its version strings, as Visual Basic 6.0's Make tab has them
-    /// (<see cref="ProjectMake"/>, <strong>RD-VBAL §2.2.3</strong>). <see langword="null"/> for a project file that has none.
+    /// (<see cref="ProjectMake"/>, <strong>RD-VBAL §2.2.3.1</strong>). <see langword="null"/> for a project file that has none.
     /// </summary>
     /// <remarks>
     /// The section is optional, and written only when the project has one. A platform of the format 1.1 reads it as a member it does not know, and writes it

@@ -10,7 +10,7 @@ namespace RDCore.SDK.Workspace;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Its members are written as the properties of <c>App</c> are named: <c>"Make": { "Title": "Battleship", "Major": 1, "Minor": 2, "Revision": 0,
+/// Its members are written as the properties of <c>App</c> are named: <c>"Make": { "Title": "Inventory", "Major": 1, "Minor": 2, "Revision": 0,
 /// "CompanyName": "Contoso" }</c>. Each is optional, and <see langword="null"/> when the section does not have it.
 /// </para>
 /// <para>
