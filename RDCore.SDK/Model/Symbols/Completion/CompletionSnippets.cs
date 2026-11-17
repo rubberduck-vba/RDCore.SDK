@@ -6,7 +6,7 @@ namespace RDCore.SDK.Model.Symbols.Completion;
 
 /// <summary>
 /// The snippets a completion list offers for the keywords that start a block or a procedure, for a client that takes snippets (<strong>LSP 3.17</strong>
-/// <c>snippetSupport</c>): the keyword is inserted as the whole block, with placeholders for what is written in it, and the cursor in its body once they are.
+/// <c>snippetSupport</c>): the keyword is inserted as the whole block, with placeholders for what is written in it, and the cursor ends in its body.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -17,9 +17,9 @@ namespace RDCore.SDK.Model.Symbols.Completion;
 /// line's indentation to each of them; for a client that does not, the snippet is written with that indentation in it (<see cref="LineIndentation"/>).
 /// </para>
 /// <para>
-/// The blocks are <c>If</c>, <c>For</c>, <c>For Each</c> (its <c>Each</c>), <c>Do</c> (a <c>Do While</c> loop), <c>Select Case</c> (its <c>Select</c>) and
-/// <c>With</c>, where a statement starts in a procedure; and <c>Sub</c>, <c>Function</c> and <c>Property</c> (a <c>Property Get</c>), where a declaration
-/// starts in the declarations section, after its modifiers when it has any (<see cref="CompletionRules.At"/>).
+/// The blocks are <c>If</c>, <c>For</c>, <c>For Each</c> (its <c>Each</c>), <c>Do</c> (a <c>Do While</c> or <c>Do Until</c> loop),
+/// <c>Select Case</c> (its <c>Select</c>) and <c>With</c>, where a statement starts in a procedure; and <c>Sub</c>, <c>Function</c> and <c>Property</c>
+/// (a <c>Property Get</c>), where a declaration starts in the declarations section, after its modifiers when it has any (<see cref="CompletionRules.At"/>).
 /// </para>
 /// </remarks>
 /// <param name="Formatting">The formatting options the snippets are indented by.</param>
