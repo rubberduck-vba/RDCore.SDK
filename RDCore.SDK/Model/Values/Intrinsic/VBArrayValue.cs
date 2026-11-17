@@ -432,12 +432,25 @@ public abstract record class VBArrayValue : VBTypedValue
     public IBindingHandle? CellAt(int flatIndex) => flatIndex < 0 || flatIndex >= _length ? null : Cell(flatIndex);
 
     /// <summary>
-    /// The elements of this array whose cells are made, each with its flat index, in the order <see cref="ElementAt"/> reads them: every element read,
-    /// written or given to a caller (<see cref="CellAt"/>) since the array was made.
+    /// The elements of this array that have a cell, each with its flat index and its cell. Walking them makes no cell.
     /// </summary>
     /// <remarks>
-    /// An element whose cell is not made holds the default value of its element type, which holds no object, and nothing is bound to it: whoever walks
-    /// every element for what it holds or what is bound to it walks these, and makes no cell of the others. An array none of whose cells is made has none.
+    /// <para>
+    /// An element is given its cell the first time it is read, written or given to a caller (the indexer, <see cref="ElementAt"/>, <see cref="CellAt"/>,
+    /// <see cref="GetElementHandle"/>, <see cref="TryLetElementAt"/>, <see cref="TrySetElementAt"/>), and keeps it. An element without a cell holds the
+    /// default value of <see cref="ItemType"/>, which holds no object, and nothing is bound to it: a caller that walks every element for what it holds,
+    /// or for what is bound to it, walks these instead and makes no cell for the others.
+    /// </para>
+    /// <para>
+    /// The elements come in increasing flat index, the column-major order <see cref="ElementAt"/> reads them in (<strong>MS-VBAL §5.4.2.4.1</strong>).
+    /// A view of the array made with <c>with</c> yields the cells it was given in place of the shared ones (<see cref="TrySetElementAt"/>), and the shared
+    /// cells at every other index.
+    /// </para>
+    /// <para>
+    /// The walk is deferred: it reads each element when it reaches it. A cell made or replaced at an index the walk has not reached yet is the one it
+    /// yields. One made or replaced at an index it has passed is not yielded. A walk whose first step finds no cell yields none, whatever cells are made
+    /// while it runs.
+    /// </para>
     /// </remarks>
     public IEnumerable<(int FlatIndex, IBindingHandle Cell)> MadeCells
     {
