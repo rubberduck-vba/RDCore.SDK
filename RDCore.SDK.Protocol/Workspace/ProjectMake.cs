@@ -15,7 +15,7 @@ namespace RDCore.SDK.Workspace;
 /// </para>
 /// <para>
 /// It is read as a project file written by hand may have it, and never makes a project file unreadable. A version number is read only when it is a whole
-/// number from 0 to 32767, which an <c>Integer</c> holds, and a title or a version string only when it is a string; a member read otherwise is
+/// number from 0 to 9999, as Visual Basic 6.0's Make tab takes it, and a title or a version string only when it is a string; a member read otherwise is
 /// <see langword="null"/>. What is written back is what was read, not the text it was read from: a <see langword="null"/> member is left out. A
 /// <c>Make</c> that is not an object reads as no section (<see cref="RDCoreProject.Make"/> is <see langword="null"/>), and is not written back.
 /// </para>
@@ -127,14 +127,16 @@ internal sealed class ProjectMakeJsonConverter : JsonConverter<ProjectMake?>
     }
 }
 
-// a version number is a whole number an Integer holds, from 0 up, as App gives it; anything else, such as "1" or 1.5, is none.
+// a version number is a whole number from 0 to 9999, as VB6's Make tab takes it; anything else, such as "1", 1.5 or 10000, reads as none.
 internal sealed class ProjectVersionNumberJsonConverter : JsonConverter<short?>
 {
+    private const short MaxVersionNumber = 9999;
+
     public override bool HandleNull => true;
 
     public override short? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
-        short? number = reader.TokenType is JsonTokenType.Number && reader.TryGetInt16(out var value) && value >= 0 ? value : null;
+        short? number = reader.TokenType is JsonTokenType.Number && reader.TryGetInt16(out var value) && value is >= 0 and <= MaxVersionNumber ? value : null;
         reader.Skip();
         return number;
     }

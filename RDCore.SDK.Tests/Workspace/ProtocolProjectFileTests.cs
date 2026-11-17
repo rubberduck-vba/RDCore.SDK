@@ -295,7 +295,7 @@ public sealed class ProtocolProjectFileTests
               "ProjectInfo": {
                 "Name": "P",
                 "Make": {
-                  "Title": "Naval", "Major": 2, "Minor": 10, "Revision": 32767,
+                  "Title": "Naval", "Major": 2, "Minor": 10, "Revision": 9999,
                   "Comments": "c", "CompanyName": "Contoso", "FileDescription": "d",
                   "LegalCopyright": "(c)", "LegalTrademarks": "tm", "ProductName": "Naval Game"
                 }
@@ -305,7 +305,8 @@ public sealed class ProtocolProjectFileTests
 
         var make = project.ProjectInfo.Make;
         Assert.IsNotNull(make);
-        Assert.AreEqual(("Naval", (short)2, (short)10, (short)32767), (make.Title, make.Major, make.Minor, make.Revision));
+        Assert.AreEqual(("Naval", (short)2, (short)10, (short)9999), (make.Title, make.Major, make.Minor, make.Revision),
+            "9999, the highest the Make tab takes");
         CollectionAssert.AreEqual(new[] { "c", "Contoso", "d", "(c)", "tm", "Naval Game" },
             new[] { make.Comments, make.CompanyName, make.FileDescription, make.LegalCopyright, make.LegalTrademarks, make.ProductName });
         Assert.IsNull(make.ExtensionData);
@@ -317,6 +318,9 @@ public sealed class ProtocolProjectFileTests
     [DataRow("""{ "Major": "1" }""", DisplayName = "a version number that is a string")]
     [DataRow("""{ "Major": 1.5 }""", DisplayName = "a version number with a fraction")]
     [DataRow("""{ "Major": -1 }""", DisplayName = "a negative version number")]
+    [DataRow("""{ "Major": 10000 }""", DisplayName = "a major version above 9999")]
+    [DataRow("""{ "Minor": 10000 }""", DisplayName = "a minor version above 9999")]
+    [DataRow("""{ "Revision": 32767 }""", DisplayName = "a revision above 9999")]
     [DataRow("""{ "Major": 32768 }""", DisplayName = "a version number no Integer holds")]
     [DataRow("""{ "Major": null }""", DisplayName = "a null version number")]
     [DataRow("""{ "Title": 1 }""", DisplayName = "a title that is a number")]
@@ -329,6 +333,8 @@ public sealed class ProtocolProjectFileTests
 
         Assert.IsNotNull(project.ProjectInfo.Make);
         Assert.IsNull(project.ProjectInfo.Make.Major);
+        Assert.IsNull(project.ProjectInfo.Make.Minor);
+        Assert.IsNull(project.ProjectInfo.Make.Revision);
         Assert.IsNull(project.ProjectInfo.Make.Title);
         Assert.IsNull(project.ProjectInfo.Make.CompanyName);
         Assert.IsNull(project.ProjectInfo.Make.ProductName);
