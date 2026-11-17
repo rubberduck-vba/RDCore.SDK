@@ -432,6 +432,33 @@ public abstract record class VBArrayValue : VBTypedValue
     public IBindingHandle? CellAt(int flatIndex) => flatIndex < 0 || flatIndex >= _length ? null : Cell(flatIndex);
 
     /// <summary>
+    /// The elements of this array whose cells are made, each with its flat index, in the order <see cref="ElementAt"/> reads them: every element read,
+    /// written or given to a caller (<see cref="CellAt"/>) since the array was made.
+    /// </summary>
+    /// <remarks>
+    /// An element whose cell is not made holds the default value of its element type, which holds no object, and nothing is bound to it: whoever walks
+    /// every element for what it holds or what is bound to it walks these, and makes no cell of the others. An array none of whose cells is made has none.
+    /// </remarks>
+    public IEnumerable<(int FlatIndex, IBindingHandle Cell)> MadeCells
+    {
+        get
+        {
+            if (!AnyMade)
+            {
+                yield break;
+            }
+
+            for (var index = 0; index < _length; index++)
+            {
+                if (MadeCell(index) is { } cell)
+                {
+                    yield return (index, cell);
+                }
+            }
+        }
+    }
+
+    /// <summary>
     /// Rebinds the element at a flat index, in the order <see cref="ElementAt"/> reads them, to <paramref name="value"/>: what writes an element at its
     /// address in memory, which is where it is in that order.
     /// </summary>

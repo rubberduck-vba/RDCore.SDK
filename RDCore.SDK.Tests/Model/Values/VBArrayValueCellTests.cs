@@ -59,6 +59,24 @@ public sealed class VBArrayValueCellTests
     }
 
     [TestMethod]
+    public void TheCellsMade_AreTheElementsUsed_AndTheirWalkMakesNone()
+    {
+        var array = NewArray(99);
+        Assert.IsEmpty(array.MadeCells);
+
+        _ = array.ElementAt(30);
+        Assert.IsTrue(array.TryLetElementAt(5, new VBIntegerValue(1)));
+        var view = array with { };
+        var cell = new ValueBindingHandle(new VBIntegerValue(9).RuntimeValue);
+        Assert.IsTrue(view.TrySetElementAt(70, cell));
+
+        CollectionAssert.AreEqual(new[] { 5, 30 }, array.MadeCells.Select(made => made.FlatIndex).ToArray());
+        CollectionAssert.AreEqual(new[] { 5, 30, 70 }, view.MadeCells.Select(made => made.FlatIndex).ToArray());
+        Assert.AreSame(cell, view.MadeCells.Last().Cell);
+        Assert.AreEqual(2, _made);
+    }
+
+    [TestMethod]
     public void AView_SharesTheCellsMadeAfterIt()
     {
         var array = NewArray(9);
