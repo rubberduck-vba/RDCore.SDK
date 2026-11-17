@@ -303,6 +303,7 @@ public sealed record class ProjectFile : IEquatable<ProjectFile>
     /// <param name="name">The constant's name.</param>
     /// <param name="value">The source text of its value.</param>
     public ProjectFile WithPrecompilerConstant(string name, string value) => this with { ProjectInfo = ProjectInfo.WithPrecompilerConstant(name, value), IsDirty = true };
+
     /// <summary>
     /// The project file with the project's <see cref="RDCoreProject.KeepSystemTheme"/> set to <paramref name="keepSystemTheme"/>; it is dirty.
     /// </summary>
@@ -407,12 +408,13 @@ public record class RDCoreProject
     public ProjectBuild? Build { get; init; }
 
     /// <summary>
-    /// Whether the program's user interface follows the system theme, light or dark, or keeps the classic light system colours: the initial value of the
+    /// Whether the program's user interface follows the system theme, light or dark, instead of the classic light system colors: the initial value of the
     /// program's <c>App.KeepSystemTheme</c>, which its code can change as it runs (<strong>RD-VBAL §2.2.3</strong>).
     /// </summary>
     /// <remarks>
-    /// It is <see langword="false"/> for a project file that does not have it, and for one whose value is not a Boolean: a project file is never refused for
-    /// it. It is written only when it is <see langword="true"/>, so a project that keeps the light colours is written as it was before the format 1.2. A
+    /// It is <see langword="false"/> for a project file that does not have it, and for one whose value is anything but the JSON <c>true</c>, such as
+    /// <c>"true"</c> or <c>1</c>: a project file is never refused for it. It is written only when it is <see langword="true"/>, so a project that keeps the
+    /// light colors is written as it was before the format 1.2. A
     /// platform of the format 1.1 reads it as a member it does not know, and writes it back as it was read (<see cref="ProjectFile.SchemaVersion"/>).
     /// </remarks>
     [JsonConverter(typeof(ProjectFlagJsonConverter))]
