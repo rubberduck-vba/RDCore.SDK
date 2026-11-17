@@ -95,18 +95,19 @@ public sealed class ProtocolProjectFileTests
     }
 
     // a project file's version is the version of its format, major.minor; what follows them is not compared. The first builds stamped 1.0.0, the next 0.1.x,
-    // and the format 1.0 came before 1.1, which adds the build section.
+    // and the format 1.0 came before 1.1, which adds the build section, and 1.2, which adds KeepSystemTheme.
     [TestMethod]
     [DataRow(null, ProjectFileSchemaMatch.Unstamped)]
     [DataRow("", ProjectFileSchemaMatch.Unstamped)]
-    [DataRow("1.1", ProjectFileSchemaMatch.Same)]
-    [DataRow("1.1.0-rc3", ProjectFileSchemaMatch.Same)]
+    [DataRow("1.2", ProjectFileSchemaMatch.Same)]
+    [DataRow("1.2.0-rc3", ProjectFileSchemaMatch.Same)]
+    [DataRow("1.1", ProjectFileSchemaMatch.Older, DisplayName = "1.1, the format before KeepSystemTheme")]
     [DataRow("1.0", ProjectFileSchemaMatch.Older, DisplayName = "1.0, the format before the build section")]
     [DataRow("1.0.0", ProjectFileSchemaMatch.Older, DisplayName = "1.0.0, as the first builds stamped it")]
     [DataRow("0.1.3", ProjectFileSchemaMatch.Older, DisplayName = "0.1.3, as the next builds stamped it")]
     [DataRow("0.87.2-rc3", ProjectFileSchemaMatch.Older)]
-    [DataRow("1.2", ProjectFileSchemaMatch.NewerMinor)]
-    [DataRow("1.2.0+abc", ProjectFileSchemaMatch.NewerMinor)]
+    [DataRow("1.3", ProjectFileSchemaMatch.NewerMinor)]
+    [DataRow("1.3.0+abc", ProjectFileSchemaMatch.NewerMinor)]
     [DataRow("2.0", ProjectFileSchemaMatch.NewerMajor)]
     [DataRow("2", ProjectFileSchemaMatch.NewerMajor, DisplayName = "a lone number is a major")]
     [DataRow("v1.0", ProjectFileSchemaMatch.Unparseable)]
@@ -133,7 +134,7 @@ public sealed class ProtocolProjectFileTests
     {
         const string json = """
             {
-              "Version": "1.2",
+              "Version": "1.3",
               "Theme": { "Accent": "teal" },
               "ProjectInfo": {
                 "Name": "Newer",
@@ -148,7 +149,7 @@ public sealed class ProtocolProjectFileTests
         var project = await ReadAsync(json);
         var written = System.Text.Json.Nodes.JsonNode.Parse(JsonSerializer.Serialize(project.WithSchemaVersion()))!;
 
-        Assert.AreEqual("1.2", written["Version"]!.GetValue<string>(), "the newer format's stamp is kept, since what it added is");
+        Assert.AreEqual("1.3", written["Version"]!.GetValue<string>(), "the newer format's stamp is kept, since what it added is");
         Assert.AreEqual("""{"Accent":"teal"}""", written["Theme"]!.ToJsonString());
         var info = written["ProjectInfo"]!;
         Assert.AreEqual("Library", info["Kind"]!.GetValue<string>());
@@ -210,7 +211,7 @@ public sealed class ProtocolProjectFileTests
         Assert.IsNull(System.Text.Json.Nodes.JsonNode.Parse(JsonSerializer.Serialize(new RDCoreProject { Name = "P" }))!["build"]);
     }
 
-    // a file of the format 1.0 that has a build section - a member it did not know - reads it, and is stamped 1.1 when it is written.
+    // a file of the format 1.0 that has a build section - a member it did not know - reads it, and is stamped with this format when it is written.
     [TestMethod]
     public async Task AFileOfTheFormatBeforeTheBuildSection_ReadsItsSection_AndIsWrittenInThisFormat()
     {
@@ -223,15 +224,66 @@ public sealed class ProtocolProjectFileTests
 
     // a file in an older format, or no format, is in this one once it is written: only a newer one keeps its stamp.
     [TestMethod]
-    [DataRow("1.0", "1.1")]
-    [DataRow("1.0.0", "1.1")]
-    [DataRow("0.1.3", "1.1")]
-    [DataRow("v1", "1.1")]
-    [DataRow("", "1.1")]
+    [DataRow("1.1", "1.2")]
+    [DataRow("1.0", "1.2")]
+    [DataRow("1.0.0", "1.2")]
+    [DataRow("0.1.3", "1.2")]
+    [DataRow("v1", "1.2")]
+    [DataRow("", "1.2")]
     [DataRow("1.4", "1.4")]
     [DataRow("3.0", "3.0")]
     public void AWrittenFile_IsStampedWithThisPlatformsFormat_UnlessItIsInANewerOne(string version, string stamped)
         => Assert.AreEqual(stamped, new ProjectFile().WithVersion(version).WithSchemaVersion().Version);
+
+    // KeepSystemTheme, as files have it: true is set, and anything else, or nothing, is not; a project file is never refused for it.
+    [TestMethod]
+    [DataRow("""{ "Name": "P", "KeepSystemTheme": true }""", true)]
+    [DataRow("""{ "Name": "P", "KeepSystemTheme": false }""", false)]
+    [DataRow("""{ "Name": "P" }""", false, DisplayName = "a project that does not have it")]
+    [DataRow("""{ "Name": "P", "KeepSystemTheme": null }""", false, DisplayName = "null")]
+    [DataRow("""{ "Name": "P", "KeepSystemTheme": "true" }""", false, DisplayName = "a string")]
+    [DataRow("""{ "Name": "P", "KeepSystemTheme": 1 }""", false, DisplayName = "a number")]
+    [DataRow("""{ "Name": "P", "KeepSystemTheme": { "Value": true } }""", false, DisplayName = "an object")]
+    public async Task KeepSystemTheme_IsReadAsFilesHaveIt(string info, bool keepSystemTheme)
+    {
+        var project = await ReadAsync($$"""{ "Version": "1.2", "ProjectInfo": {{info}} }""");
+
+        Assert.AreEqual(keepSystemTheme, project.ProjectInfo.KeepSystemTheme);
+        Assert.AreEqual("P", project.ProjectInfo.Name);
+        Assert.IsFalse(project.ProjectInfo.ExtensionData?.ContainsKey(nameof(RDCoreProject.KeepSystemTheme)) ?? false, "a member this model knows");
+    }
+
+    // it is written only when it is set, and reads back as it was written.
+    [TestMethod]
+    [DataRow(true)]
+    [DataRow(false)]
+    public async Task KeepSystemTheme_IsWrittenOnlyWhenItIsSet_AndReadsBack(bool keepSystemTheme)
+    {
+        var project = new ProjectFile(Root, new RDCoreProject { Name = "P" }).WithKeepSystemTheme(keepSystemTheme).WithSchemaVersion();
+
+        var json = JsonSerializer.Serialize(project);
+        var info = System.Text.Json.Nodes.JsonNode.Parse(json)!["ProjectInfo"]!.AsObject();
+        var read = await ReadAsync(json);
+
+        Assert.AreEqual(keepSystemTheme, info.ContainsKey(nameof(RDCoreProject.KeepSystemTheme)), json);
+        Assert.AreEqual(keepSystemTheme ? "true" : null, info[nameof(RDCoreProject.KeepSystemTheme)]?.ToJsonString());
+        Assert.AreEqual(keepSystemTheme, read.ProjectInfo.KeepSystemTheme);
+        Assert.AreEqual(ProjectFile.SchemaVersion, read.Version);
+    }
+
+    // a file of the format 1.1, which has no KeepSystemTheme, loads with the light colours, and is written in this format without the member.
+    [TestMethod]
+    public async Task AFileOfTheFormatBeforeKeepSystemTheme_ReadsItAsNotSet_AndIsWrittenInThisFormat()
+    {
+        var project = await ReadAsync("""{ "Version": "1.1", "ProjectInfo": { "Name": "P", "Modules": [ "Module1.bas" ], "build": { "entryPoint": "Module1.Main" } } }""");
+
+        Assert.AreEqual(ProjectFileSchemaMatch.Older, ProjectFile.SchemaOf(project.Version));
+        Assert.IsFalse(project.ProjectInfo.KeepSystemTheme);
+        Assert.AreEqual("Module1.Main", project.ProjectInfo.Build?.EntryPoint);
+        var written = System.Text.Json.Nodes.JsonNode.Parse(JsonSerializer.Serialize(project.WithSchemaVersion()))!;
+        Assert.AreEqual("1.2", written["Version"]!.GetValue<string>());
+        Assert.IsNull(written["ProjectInfo"]!["KeepSystemTheme"]);
+    }
 
     [TestMethod]
     [DataRow(null, "Attribute VB_Name = \"Module1\"\r\n", ProjectModuleKind.Standard)]
