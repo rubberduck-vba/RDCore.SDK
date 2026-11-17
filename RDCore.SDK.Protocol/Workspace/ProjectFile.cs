@@ -27,7 +27,7 @@ public sealed record class ProjectFile : IEquatable<ProjectFile>
     /// Before the format had a version of its own, a project file was stamped with the version of the platform that wrote it: <c>1.0.0</c> by the first builds,
     /// <c>0.1.x</c> by the next. They read as the format 1.0 and an older one (<see cref="SchemaOf"/>), and are both the format 1.0. The format 1.1 adds the
     /// project's <c>build</c> section (<see cref="RDCoreProject.Build"/>), and the format 1.2 the project's <c>KeepSystemTheme</c>
-    /// (<see cref="RDCoreProject.KeepSystemTheme"/>).
+    /// (<see cref="RDCoreProject.KeepSystemTheme"/>) and its <c>Make</c> section (<see cref="RDCoreProject.Make"/>).
     /// </remarks>
     public const string SchemaVersion = "1.2";
 
@@ -310,6 +310,12 @@ public sealed record class ProjectFile : IEquatable<ProjectFile>
     /// <param name="keepSystemTheme">Whether the program's user interface follows the system theme.</param>
     public ProjectFile WithKeepSystemTheme(bool keepSystemTheme) => this with { ProjectInfo = ProjectInfo with { KeepSystemTheme = keepSystemTheme }, IsDirty = true };
 
+    /// <summary>
+    /// The project file with the project's <see cref="RDCoreProject.Make"/> section set to <paramref name="make"/>; it is dirty.
+    /// </summary>
+    /// <param name="make">The program's title, version and version strings; <see langword="null"/> for no section.</param>
+    public ProjectFile WithMake(ProjectMake? make) => this with { ProjectInfo = ProjectInfo with { Make = make }, IsDirty = true };
+
     /// <summary>The project file without <paramref name="reference"/>; it is dirty.</summary>
     /// <param name="reference">The reference to remove.</param>
     public ProjectFile WithoutReference(RDCoreReference reference) => this with { ProjectInfo = ProjectInfo.WithoutReference(reference), IsDirty = true };
@@ -420,6 +426,18 @@ public record class RDCoreProject
     [JsonConverter(typeof(ProjectFlagJsonConverter))]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool KeepSystemTheme { get; init; }
+
+    /// <summary>
+    /// The project's <c>Make</c> section: the program's title, its version and its version strings, as Visual Basic 6.0's Make tab has them
+    /// (<see cref="ProjectMake"/>, <strong>RD-VBAL §2.2.3</strong>). <see langword="null"/> for a project file that has none.
+    /// </summary>
+    /// <remarks>
+    /// The section is optional, and written only when the project has one. A platform of the format 1.1 reads it as a member it does not know, and writes it
+    /// back as it was read (<see cref="ProjectFile.SchemaVersion"/>).
+    /// </remarks>
+    [JsonConverter(typeof(ProjectMakeJsonConverter))]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public ProjectMake? Make { get; init; }
 
     /// <summary>
     /// The members of the project this model does not know, as they were read, which are written back (<see cref="ProjectFile.ExtensionData"/>).
