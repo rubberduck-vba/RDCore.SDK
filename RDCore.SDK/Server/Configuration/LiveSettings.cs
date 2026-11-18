@@ -205,9 +205,9 @@ public sealed class LiveSettings(IEnumerable<LiveSettingsTarget> targets, Settin
     /// <c>:</c>; none unless said otherwise.
     /// </summary>
     /// <remarks>
-    /// The workspace's settings are a layer above the user's (<see cref="WorkspaceSettingsConfiguration.AddWorkspaceSettings"/>), and what a client says is what
-    /// its user set: a live setting the workspace sets keeps the workspace's value, whatever the client says, and a list the client says is the client's items
-    /// followed by the workspace's own that are not among them.
+    /// The workspace's settings are a layer above the user's (<see cref="WorkspaceSettingsConfiguration.AddWorkspaceSettings"/>), and what a client says is
+    /// what its user set: a live setting the workspace sets keeps the workspace's value, whatever the client says, and a list the client says is the client's
+    /// items followed by the workspace's own that are not among them.
     /// </remarks>
     public IReadOnlyDictionary<string, string> Workspace { get; init; } = new Dictionary<string, string>();
 

@@ -6,19 +6,19 @@ using System.IO.Abstractions;
 namespace RDCore.SDK.Server.Configuration;
 
 /// <summary>
-/// The settings a workspace keeps for itself, in the <c>Configuration</c> section of the <c>appsettings.json</c> at its root: whoever opens the workspace works
-/// with them (<see cref="WorkspaceSettingsConfiguration.AddWorkspaceSettings"/>).
+/// The settings a workspace keeps for itself, in the <c>Configuration</c> section of the <c>appsettings.json</c> at its root: whoever opens the workspace
+/// works with them (<see cref="WorkspaceSettingsConfiguration.AddWorkspaceSettings"/>).
 /// </summary>
 /// <remarks>
 /// <para>
-/// A workspace sets only what <see cref="CanSet"/> says it can: no setting of the deployment (<see cref="SettingReach.Deployment"/>), and none that decides what a
-/// program may do to the machine it runs on (<see cref="SettingDescriptor.IsTrustSensitive"/>). A workspace can come from anywhere, a cloned repository
-/// included, and it grants itself no rights. Nothing else of the file is read: not a setting the schema does not have, not a value the setting cannot be, and
-/// not the program's own settings (<c>ProgramSettings</c>), which are kept in the same file.
+/// A workspace sets only what <see cref="CanSet"/> says it can: no setting of the deployment (<see cref="SettingReach.Deployment"/>), and none that decides
+/// what a program may do to the machine it runs on (<see cref="SettingDescriptor.IsTrustSensitive"/>). A workspace can come from anywhere, a cloned
+/// repository included, and it grants itself no rights. Nothing else of the file is read: not a setting the schema does not have, not a value the setting
+/// cannot be, and not the program's own settings (<c>ProgramSettings</c>), which are kept in the same file.
 /// </para>
 /// <para>
-/// Adding an item to a list, or removing one, writes the file again, as <see cref="UserSettingsStore"/> writes the user's: its other sections are kept, and its
-/// comments are not.
+/// Adding an item to a list, or removing one, writes the file again, as <see cref="UserSettingsStore"/> writes the user's: its other sections are kept, and
+/// its comments are not.
 /// </para>
 /// </remarks>
 /// <param name="fileSystem">The file system the workspace is on.</param>
@@ -40,7 +40,9 @@ public sealed class WorkspaceSettingsStore(IFileSystem fileSystem, SettingsSchem
     /// The root folder of a workspace, as a command line or a setting names it (<see cref="SdkWorkspaceOptions.WorkspaceUri"/>).
     /// </summary>
     /// <param name="workspace">A <c>file:</c> URI, or a path, absolute or relative to the working directory.</param>
-    /// <returns>The full path of the folder; <see langword="null"/> when <paramref name="workspace"/> is a URI of another scheme, which names no folder.</returns>
+    /// <returns>
+    /// The full path of the folder; <see langword="null"/> when <paramref name="workspace"/> is a URI of another scheme, which names no folder.
+    /// </returns>
     public static string? FolderOf(string workspace)
     {
         if (Uri.TryCreate(workspace, UriKind.Absolute, out var uri))
@@ -221,19 +223,19 @@ public sealed class WorkspaceSettingsStore(IFileSystem fileSystem, SettingsSchem
 public static class WorkspaceSettingsConfiguration
 {
     /// <summary>
-    /// Adds the settings a workspace keeps for itself (<see cref="WorkspaceSettingsStore"/>) to a configuration, after the user's settings and before what the
-    /// environment and the command line say: what a workspace sets takes the place of what its user set, and a process that is told otherwise when it is started is
-    /// told so on purpose.
+    /// Adds the settings a workspace keeps for itself (<see cref="WorkspaceSettingsStore"/>) to a configuration, after the user's settings and before what
+    /// the environment and the command line say: what a workspace sets takes the place of what its user set, and a process that is told otherwise when it is
+    /// started is told so on purpose.
     /// </summary>
     /// <remarks>
     /// <para>
-    /// A list is the items of the layers below the workspace's, followed by the workspace's own that are not among them: a workspace adds to its user's list and
-    /// takes nothing from it. Every index of the list is written again, so that no item of a layer below is left at an index the workspace's list does not reach.
-    /// A value of any other kind takes the place of the one below it.
+    /// A list is the items of the layers below the workspace's, followed by the workspace's own that are not among them: a workspace adds to its user's list
+    /// and takes nothing from it. Every index of the list is written again, so that no item of a layer below is left at an index the workspace's list does
+    /// not reach. A value of any other kind takes the place of the one below it.
     /// </para>
     /// <para>
-    /// Only the settings of <paramref name="schema"/> that a workspace can set (<see cref="WorkspaceSettingsStore.CanSet"/>), and values the setting can be, are
-    /// read. A file that is not there sets nothing, and neither does one that cannot be read. A component reads the file when it starts, and not again.
+    /// Only the settings of <paramref name="schema"/> that a workspace can set (<see cref="WorkspaceSettingsStore.CanSet"/>), and values the setting can be,
+    /// are read. A file that is not there sets nothing, and neither does one that cannot be read. A component reads the file when it starts, and not again.
     /// </para>
     /// </remarks>
     /// <param name="builder">The configuration.</param>
@@ -305,8 +307,8 @@ public static class WorkspaceSettingsConfiguration
 
             if (read.Lists.Count > 0)
             {
-                // the lists of the layers below, as they are when the workspace's file is read: a plain overlay would put the workspace's items in the place of
-                // theirs, index by index.
+                // the lists of the layers below, as they are when the workspace's file is read: a plain overlay would put the workspace's items in the place
+                // of theirs, index by index.
                 var lower = below();
                 try
                 {
