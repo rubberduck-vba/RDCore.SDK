@@ -42,9 +42,9 @@ public enum ProjectOutputType
 /// <para>
 /// It is read as a project file written by hand may have it, and never makes a project file unreadable. An <c>outputType</c> other than <c>Library</c> or
 /// <c>ConsoleApplication</c>, whatever its case, is <see cref="ProjectOutputType.Application"/>, and an <c>entryPoint</c> that is not a string, or is
-/// empty or blank, is none. What is written
-/// back is what was read, not the text it was read from: a program's <c>outputType</c>, and an entry point that is none, are left out. A <c>build</c> that
-/// is no object is no section, and is not written back.
+/// empty or blank, is none. What is written back is what was read, not the text it was read from: the <c>outputType</c> of an
+/// <see cref="ProjectOutputType.Application"/>, and an entry point that is none, are left out. A <c>build</c> that is not an object reads as no section,
+/// and is not written back.
 /// </para>
 /// </remarks>
 public sealed record class ProjectBuild
