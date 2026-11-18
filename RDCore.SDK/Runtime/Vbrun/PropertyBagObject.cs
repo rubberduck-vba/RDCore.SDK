@@ -58,13 +58,13 @@ public sealed class PropertyBagObject<TValue>
     /// Reads a value, as <c>ReadProperty</c> does with no default.
     /// </summary>
     /// <param name="name">The value's name, in any case.</param>
-    /// <param name="value">The value, when the bag holds one of that name.</param>
+    /// <param name="value">The value, when the bag holds one of that name; otherwise the default of <typeparamref name="TValue"/>.</param>
     /// <returns>
     /// <see cref="PropertyBagFailure.None"/> when the bag holds the value; <see cref="PropertyBagFailure.DataValueNotFound"/> when it does
     /// not; <see cref="PropertyBagFailure.InvalidProcedureCall"/> for an empty name.
     /// </returns>
     /// <exception cref="ArgumentNullException"><paramref name="name"/> is <see langword="null"/>.</exception>
-    public PropertyBagFailure TryReadProperty(string name, [MaybeNullWhen(false)] out TValue value)
+    public PropertyBagFailure TryReadProperty(string name, [MaybeNull] out TValue value)
     {
         ArgumentNullException.ThrowIfNull(name);
         value = default;
@@ -87,12 +87,14 @@ public sealed class PropertyBagObject<TValue>
     /// </summary>
     /// <param name="name">The value's name, in any case.</param>
     /// <param name="defaultValue">The value read when the bag holds none of that name, as it is.</param>
-    /// <param name="value">The value the bag holds, or <paramref name="defaultValue"/>.</param>
+    /// <param name="value">
+    /// The value the bag holds, or <paramref name="defaultValue"/>; the default of <typeparamref name="TValue"/> for an empty name.
+    /// </param>
     /// <returns>
     /// <see cref="PropertyBagFailure.None"/>, or <see cref="PropertyBagFailure.InvalidProcedureCall"/> for an empty name.
     /// </returns>
     /// <exception cref="ArgumentNullException"><paramref name="name"/> or <paramref name="defaultValue"/> is <see langword="null"/>.</exception>
-    public PropertyBagFailure TryReadProperty(string name, TValue defaultValue, [MaybeNullWhen(false)] out TValue value)
+    public PropertyBagFailure TryReadProperty(string name, TValue defaultValue, [MaybeNull] out TValue value)
     {
         ArgumentNullException.ThrowIfNull(defaultValue);
         var failure = TryReadProperty(name, out value);
