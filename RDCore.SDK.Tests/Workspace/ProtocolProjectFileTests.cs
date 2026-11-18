@@ -165,6 +165,9 @@ public sealed class ProtocolProjectFileTests
     [DataRow("""{ "outputType": "Library" }""", ProjectOutputType.Library, null)]
     [DataRow("""{ "outputType": "library" }""", ProjectOutputType.Library, null, DisplayName = "Library, whatever its case")]
     [DataRow("""{ "outputType": "Application", "entryPoint": "Module1.Main" }""", ProjectOutputType.Application, "Module1.Main")]
+    [DataRow("""{ "outputType": "ConsoleApplication", "entryPoint": "Game.Main" }""", ProjectOutputType.ConsoleApplication, "Game.Main")]
+    [DataRow("""{ "outputType": "consoleapplication" }""", ProjectOutputType.ConsoleApplication, null, DisplayName = "ConsoleApplication, whatever its case")]
+    [DataRow("""{ "outputType": "Console" }""", ProjectOutputType.Application, null, DisplayName = "Console alone, a value it does not know, is a program")]
     [DataRow("""{ "entryPoint": "Start" }""", ProjectOutputType.Application, "Start", DisplayName = "a program unless it says Library")]
     [DataRow("""{ "outputType": "Exe" }""", ProjectOutputType.Application, null, DisplayName = "an output type it does not know is a program")]
     [DataRow("""{ "outputType": 1, "entryPoint": 2 }""", ProjectOutputType.Application, null, DisplayName = "what is no string says nothing")]
@@ -177,6 +180,7 @@ public sealed class ProtocolProjectFileTests
         Assert.IsNotNull(project.ProjectInfo.Build);
         Assert.AreEqual(outputType, project.ProjectInfo.Build.OutputType);
         Assert.AreEqual(outputType is ProjectOutputType.Library, project.ProjectInfo.Build.IsLibrary);
+        Assert.AreEqual(outputType is ProjectOutputType.ConsoleApplication, project.ProjectInfo.Build.IsConsoleApplication);
         Assert.AreEqual(entryPoint, project.ProjectInfo.Build.EntryPoint);
         Assert.IsFalse(project.ProjectInfo.ExtensionData?.ContainsKey("build") ?? false, "a member this model knows");
     }
@@ -209,6 +213,23 @@ public sealed class ProtocolProjectFileTests
         Assert.AreEqual("""{"entryPoint":"Module1.Main"}""", System.Text.Json.Nodes.JsonNode.Parse(JsonSerializer.Serialize(program))!["build"]!.ToJsonString(),
             "a program's output type is left out, as files leave it out");
         Assert.IsNull(System.Text.Json.Nodes.JsonNode.Parse(JsonSerializer.Serialize(new RDCoreProject { Name = "P" }))!["build"]);
+    }
+
+    // a console program's output type is written as ConsoleApplication, whatever case it was read in, and reads back as one.
+    [TestMethod]
+    [DataRow("ConsoleApplication")]
+    [DataRow("CONSOLEAPPLICATION", DisplayName = "read in another case")]
+    public async Task AConsoleProgramsOutputType_IsWritten_AndReadsBack(string read)
+    {
+        var project = await ReadAsync($$"""{ "Version": "1.2", "ProjectInfo": { "Name": "P", "build": { "outputType": "{{read}}" } } }""");
+
+        var json = JsonSerializer.Serialize(project.WithSchemaVersion());
+        var again = await ReadAsync(json);
+
+        Assert.AreEqual("""{"outputType":"ConsoleApplication"}""", System.Text.Json.Nodes.JsonNode.Parse(json)!["ProjectInfo"]!["build"]!.ToJsonString());
+        Assert.AreEqual(ProjectOutputType.ConsoleApplication, again.ProjectInfo.Build?.OutputType);
+        Assert.IsTrue(again.ProjectInfo.Build!.IsConsoleApplication);
+        Assert.IsFalse(again.ProjectInfo.Build.IsLibrary, "a console program is run");
     }
 
     // a file of the format 1.0 that has a build section, a member that format did not know, reads it, and is stamped with this format when it is written.

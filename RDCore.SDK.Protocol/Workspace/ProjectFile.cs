@@ -27,7 +27,8 @@ public sealed record class ProjectFile : IEquatable<ProjectFile>
     /// Before the format had a version of its own, a project file was stamped with the version of the platform that wrote it: <c>1.0.0</c> by the first builds,
     /// <c>0.1.x</c> by the next. They read as the format 1.0 and an older one (<see cref="SchemaOf"/>), and are both the format 1.0. The format 1.1 adds the
     /// project's <c>build</c> section (<see cref="RDCoreProject.Build"/>), and the format 1.2 the project's <c>KeepSystemTheme</c>
-    /// (<see cref="RDCoreProject.KeepSystemTheme"/>) and its <c>Make</c> section (<see cref="RDCoreProject.Make"/>).
+    /// (<see cref="RDCoreProject.KeepSystemTheme"/>), its <c>Make</c> section (<see cref="RDCoreProject.Make"/>), and the <c>build</c> section's
+    /// <c>ConsoleApplication</c> output type (<see cref="ProjectOutputType.ConsoleApplication"/>).
     /// </remarks>
     public const string SchemaVersion = "1.2";
 
