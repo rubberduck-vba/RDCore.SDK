@@ -13,7 +13,9 @@ namespace RDCore.SDK.Runtime.Vbrun;
 /// </para>
 /// <list type="table">
 /// <listheader><term>Call</term><description>Result</description></listheader>
-/// <item><term><c>ReadProperty</c> of a name the bag holds</term><description>The value, of the type the container gives, whatever the default.</description></item>
+/// <item>
+/// <term><c>ReadProperty</c> of a name the bag holds</term><description>The value, of the type the container gives, whatever the default.</description>
+/// </item>
 /// <item><term><c>ReadProperty</c> of another name, with a default</term><description>The default, as it is given.</description></item>
 /// <item><term><c>ReadProperty</c> of another name, with no default</term><description>Run-time error 327.</description></item>
 /// <item><term><c>ReadProperty</c> of an empty name</term><description>Run-time error 5.</description></item>
@@ -21,7 +23,7 @@ namespace RDCore.SDK.Runtime.Vbrun;
 /// </list>
 /// <para>
 /// The object is the container's bag only. The bag that <c>New PropertyBag</c> makes, whose values a program writes and reads through
-/// its <c>Contents</c>, is not modelled.
+/// its <c>Contents</c>, is not modeled.
 /// </para>
 /// </remarks>
 /// <typeparam name="TValue">The host's type of a value.</typeparam>
@@ -34,8 +36,8 @@ public sealed class PropertyBagObject<TValue>
     /// Creates the bag a container gives a placed UserControl's <c>ReadProperties</c>.
     /// </summary>
     /// <param name="values">
-    /// The values the container keeps for the control, by name, each read when it is asked for. A value the host does not read can throw
-    /// its own exception, which <see cref="TryReadProperty(string, out TValue)"/> lets through.
+    /// The values the container keeps for the control, by name, each read when it is asked for. A value the host cannot read can throw
+    /// the host's own exception, which both <c>TryReadProperty</c> overloads let through.
     /// </param>
     /// <exception cref="ArgumentNullException"><paramref name="values"/>, a name or a value is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">Two of <paramref name="values"/> have the same name, without regard to case.</exception>

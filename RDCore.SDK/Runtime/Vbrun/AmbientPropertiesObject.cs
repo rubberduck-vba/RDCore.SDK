@@ -19,7 +19,7 @@ namespace RDCore.SDK.Runtime.Vbrun;
 /// </list>
 /// <para>
 /// A member <c>AmbientProperties</c> does not have, read late-bound, is run-time error 445, "Object doesn't support this action", in VB6; the
-/// runtime raises it. <c>Palette</c> is not modelled.
+/// runtime raises it. <c>Palette</c> is not modeled.
 /// </para>
 /// </remarks>
 public sealed class AmbientPropertiesObject
