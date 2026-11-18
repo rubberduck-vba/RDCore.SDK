@@ -5,9 +5,9 @@ using System.IO.Abstractions.TestingHelpers;
 namespace RDCore.Tests.Server.Configuration;
 
 /// <summary>
-/// What a workspace sets for itself, in the <c>Configuration</c> section of its <c>appsettings.json</c>, comes after what its user set and before what a process
-/// is told when it starts. A workspace grants itself no rights: it sets no setting of the deployment and no trust-sensitive one. A list it sets adds its items
-/// to the list below it.
+/// What a workspace sets for itself, in the <c>Configuration</c> section of its <c>appsettings.json</c>, comes after what its user set and before what a
+/// process is told when it starts. A workspace grants itself no rights: it sets no setting of the deployment and no trust-sensitive one. A list it sets adds
+/// its items to the list below it.
 /// </summary>
 [TestClass]
 public sealed class WorkspaceSettingsConfigurationTests
@@ -181,8 +181,8 @@ public sealed class WorkspaceSettingsConfigurationTests
 }
 
 /// <summary>
-/// The lists of a workspace are changed in its file, which keeps what else it holds; a workspace changes no setting it cannot set. While a component runs, what
-/// its client says is what the user set, and the workspace's settings stay above it.
+/// The lists of a workspace are changed in its file, which keeps what else it holds; a workspace changes no setting it cannot set. While a component runs,
+/// what its client says is what the user set, and the workspace's settings stay above it.
 /// </summary>
 [TestClass]
 public sealed class WorkspaceSettingsStoreTests
