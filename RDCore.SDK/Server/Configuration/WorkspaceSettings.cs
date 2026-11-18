@@ -127,6 +127,8 @@ public sealed class WorkspaceSettingsStore(IFileSystem fileSystem, SettingsSchem
     /// <summary>
     /// What a workspace's file sets: the values a workspace can set, by their paths in the configuration; and the items of each list, apart.
     /// </summary>
+    /// <param name="Values">The values that are not lists, by their paths: <c>Configuration:Server:TraceLevel</c>.</param>
+    /// <param name="Lists">The items of each list, by the path of the list, in their order and without duplicates.</param>
     internal sealed record class WorkspaceValues(IReadOnlyDictionary<string, string> Values, IReadOnlyDictionary<string, IReadOnlyList<string>> Lists);
 
     internal static WorkspaceValues ReadFile(IFileSystem fileSystem, string path, SettingsSchema schema)
