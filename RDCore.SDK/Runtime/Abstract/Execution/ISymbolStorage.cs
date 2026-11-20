@@ -2,6 +2,7 @@ using RDCore.SDK.Model.Symbols.Abstract;
 using RDCore.SDK.Model.Types.Abstract;
 using RDCore.SDK.Model.Values.Abstract;
 using RDCore.SDK.Model.Values.Bindings;
+using RDCore.SDK.Model.Values.Runtime;
 using RDCore.SDK.Runtime.Shared;
 using System.Diagnostics.CodeAnalysis;
 
@@ -34,7 +35,7 @@ public interface ISymbolStorage
     /// Gets the <see cref="IBindingHandle"/> of the place at the specified address in the runtime <em>memory map</em> that holds a value of
     /// <paramref name="type"/>: what is bound there, or a field or an element inside it that starts at the address
     /// (<see cref="ISessionStorage.TryRead(MemoryAddress, VBType?, out IBindingHandle?)"/>). This is how a reference parameter's binding is read
-    /// (<strong>MS-VBAL §5.3.1.11</strong>): a <see cref="Model.Values.Runtime.VBRuntimeReference"/> to a record's first field has the record's
+    /// (<strong>MS-VBAL §5.3.1.11</strong>): a <see cref="VBRuntimeReference"/> to a record's first field has the record's
     /// address.
     /// </summary>
     /// <param name="address">The memory address to read.</param>
@@ -47,6 +48,23 @@ public interface ISymbolStorage
     /// </remarks>
     bool TryRead(MemoryAddress address, VBType? type, [NotNullWhen(true)][MaybeNullWhen(false)] out IBindingHandle? value)
         => TryRead(address, out value);
+
+    /// <summary>
+    /// Gets the <see cref="IBindingHandle"/> of the variable <paramref name="reference"/> refers to, given to a reference parameter of
+    /// <paramref name="parameterType"/> (<strong>MS-VBAL §5.3.1.11</strong>). The variable is of the type the reference declares
+    /// (<see cref="VBRuntimeReference.DeclaredType"/>) when the parameter does not have it, and of the parameter's type otherwise.
+    /// </summary>
+    /// <param name="reference">The reference.</param>
+    /// <param name="parameterType">
+    /// The declared type of the parameter; <see langword="null"/>, with a reference that declares no type, reads what is bound at the address.
+    /// </param>
+    /// <param name="value">The variable's binding, if successful.</param>
+    /// <returns><see langword="false"/> when nothing is bound at the reference's address and no place of the variable's type starts there.</returns>
+    /// <remarks>
+    /// Reads the place of the variable's type at the reference's address (<see cref="TryRead(MemoryAddress, VBType?, out IBindingHandle?)"/>).
+    /// </remarks>
+    bool TryRead(VBRuntimeReference reference, VBType? parameterType, [NotNullWhen(true)][MaybeNullWhen(false)] out IBindingHandle? value)
+        => TryRead(reference.Value, reference.DeclaredType ?? parameterType, out value);
 
     /// <summary>
     /// Gets the <see cref="MemoryAddress"/> currently reserved for <paramref name="symbol"/>, if any:
