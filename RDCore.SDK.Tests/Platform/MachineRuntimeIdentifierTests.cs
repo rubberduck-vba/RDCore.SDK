@@ -14,10 +14,15 @@ public sealed class MachineRuntimeIdentifierTests
     [TestMethod]
     public void TheIdentifier_IsTheOperatingSystem_AHyphen_AndTheArchitectureOfTheProcess()
     {
-        var system = OperatingSystem.IsWindows() ? "win" : OperatingSystem.IsMacOS() ? "osx" : "linux";
+        var system = OperatingSystem.IsWindows() ? "win"
+            : OperatingSystem.IsMacOS() ? "osx"
+            : OperatingSystem.IsLinux() ? "linux"
+            : OperatingSystem.IsFreeBSD() ? "freebsd"
+            : null;
         var architecture = RuntimeInformation.ProcessArchitecture.ToString().ToLowerInvariant();
 
-        Assert.AreEqual($"{system}-{architecture}", PlatformManifest.MachineRuntimeIdentifier);
+        var expected = system is null ? RuntimeInformation.RuntimeIdentifier : $"{system}-{architecture}";
+        Assert.AreEqual(expected, PlatformManifest.MachineRuntimeIdentifier);
     }
 
     // a manifest names the portable identifier (win-x64, linux-arm64), never a distribution's; the C library is not part of it.
