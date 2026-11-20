@@ -1,4 +1,5 @@
 using RDCore.SDK.Model.Symbols.Abstract;
+using RDCore.SDK.Model.Types.Abstract;
 using RDCore.SDK.Model.Values.Abstract;
 using RDCore.SDK.Model.Values.Bindings;
 using RDCore.SDK.Runtime.Shared;
@@ -28,6 +29,24 @@ public interface ISymbolStorage
     /// <param name="address">The memory address to read.</param>
     /// <param name="value">The retrieved binding, if successful.</param>
     bool TryRead(MemoryAddress address, [NotNullWhen(true)][MaybeNullWhen(false)] out IBindingHandle? value);
+
+    /// <summary>
+    /// Gets the <see cref="IBindingHandle"/> of the place at the specified address in the runtime <em>memory map</em> that holds a value of
+    /// <paramref name="type"/>: what is bound there, or a field or an element inside it that starts at the address
+    /// (<see cref="ISessionStorage.TryRead(MemoryAddress, VBType?, out IBindingHandle?)"/>). This is how a reference parameter's binding is read
+    /// (<strong>MS-VBAL §5.3.1.11</strong>): a <see cref="Model.Values.Runtime.VBRuntimeReference"/> to a record's first field has the record's
+    /// address.
+    /// </summary>
+    /// <param name="address">The memory address to read.</param>
+    /// <param name="type">The type of the value the place holds; <see langword="null"/> reads what is bound at the address.</param>
+    /// <param name="value">The retrieved binding, if successful.</param>
+    /// <returns><see langword="false"/> when nothing is bound at the address and no place of <paramref name="type"/> starts there.</returns>
+    /// <remarks>
+    /// The default implementation reads what is bound at the address (<see cref="TryRead(MemoryAddress, out IBindingHandle?)"/>), whatever
+    /// <paramref name="type"/> is.
+    /// </remarks>
+    bool TryRead(MemoryAddress address, VBType? type, [NotNullWhen(true)][MaybeNullWhen(false)] out IBindingHandle? value)
+        => TryRead(address, out value);
 
     /// <summary>
     /// Gets the <see cref="MemoryAddress"/> currently reserved for <paramref name="symbol"/>, if any:
