@@ -56,6 +56,29 @@ public sealed class WrittenAsMemberTests
     }
 
     [TestMethod]
+    [DataRow(1, "classes", DisplayName = "version 1, a class")]
+    [DataRow(6, "classes", DisplayName = "version 6, a class")]
+    [DataRow(6, "modules", DisplayName = "version 6, a module")]
+    public void AFileOfAnEarlierFormat_ThatStatesTheMembers_IsRefused(int version, string owners)
+    {
+        var json = Library.Replace("\"formatVersion\": 7", $"\"formatVersion\": {version}").Replace("\"classes\"", $"\"{owners}\"");
+
+        var refused = Assert.ThrowsExactly<InvalidDataException>(() => LibraryJson.Read(json));
+
+        StringAssert.Contains(refused.Message, "'Range._Default'");
+    }
+
+    [TestMethod]
+    public void AFileOfFormatVersion6_ThatStatesNone_IsRead()
+    {
+        var library = LibraryJson.Read(Library.Replace("\"formatVersion\": 7", "\"formatVersion\": 6")
+            .Replace("\"writtenAs\": { \"withArguments\": \"Item\", \"withoutArguments\": \"Value\" },", string.Empty));
+
+        Assert.AreEqual(6, library.FormatVersion);
+        Assert.IsNull(Member(library, "_Default").WrittenAs);
+    }
+
+    [TestMethod]
     public void TheMembers_AreWrittenWhereTheyAreStated_AndReadBackTheSame()
     {
         var written = LibraryJson.Write(LibraryJson.Read(Library));
