@@ -94,4 +94,19 @@ public sealed class DeclarationBindingWireTests
     [TestMethod]
     public void ADeclarationOfAnyOtherProject_IsNotUsedByReferencingProjects()
         => Assert.IsFalse(RoundTrip(DeclarationRole.None, null).IsUsedByReferencingProjects);
+
+    // a parameter of an interface member or of an event: whether an implementation or a handler refers to its own, or that this is not stated.
+    [TestMethod]
+    [DataRow(true)]
+    [DataRow(false)]
+    [DataRow(null)]
+    public void WhetherABoundMemberRefersToAParameter_IsReadBackAsItWasWritten(bool? isReferred)
+    {
+        var parameter = new DeclarationFact(new SemanticId(Spun), "times", DeclarationKind.Parameter, AccessModifier.Private, false,
+            new SourceLocation(Module, SourceRange.Empty), null) { IsReferredToByABoundMember = isReferred };
+        var model = new ModuleSemanticModel(Module, [], []) { Declarations = [parameter] };
+
+        Assert.AreEqual(isReferred, PlatformJson.Deserialize<SemanticsPayload>(PlatformJson.Serialize(new SemanticsPayload([ModuleSemanticsDto.From(model)])))
+            .Modules.Single().Declarations.Single().IsReferredToByABoundMember);
+    }
 }
