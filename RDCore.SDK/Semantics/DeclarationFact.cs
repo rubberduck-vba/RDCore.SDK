@@ -265,8 +265,8 @@ public sealed record class DeclarationFact(
 
     /// <summary>
     /// For a parameter of an interface member or of an event that the workspace declares: whether a member bound to it refers to its parameter at the same
-    /// position, an implementation of the interface member (<strong>MS-VBAL §5.3.1.10</strong>) or a handler of the event (<strong>MS-VBAL §5.3.1.8</strong>,
-    /// <strong>§5.3.1.9</strong>), in any module of the workspace. <see langword="null"/> for any other declaration, and when nothing is bound to the member,
+    /// position, an implementation of the interface member (<strong>MS-VBAL §5.3.1.9</strong>) or a handler of the event (<strong>MS-VBAL §5.3.1.8</strong>),
+    /// in any module of the workspace. <see langword="null"/> for any other declaration, and when nothing is bound to the member,
     /// or when a project that references this one may bind to it: a class that is exposed (<strong>MS-VBAL §5.2.4.1.1</strong>) or a library project's.
     /// </summary>
     public bool? IsReferredToByABoundMember { get; init; }
