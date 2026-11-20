@@ -16,7 +16,8 @@ public static class RDCoreExtensionProtocol
     public const string DiagnoseDocument = "rdcore/diagnostics/document";
 
     /// <summary>
-    /// Hands a diagnostics-provider extension a project of the workspace and asks for what its project analyzers find, of the project's <c>.rdproj</c>.
+    /// Hands a diagnostics-provider extension a project of the workspace and asks for the diagnostics its project analyzers find, at ranges of the project's
+    /// <c>.rdproj</c>.
     /// </summary>
     public const string DiagnoseProject = "rdcore/diagnostics/project";
 }

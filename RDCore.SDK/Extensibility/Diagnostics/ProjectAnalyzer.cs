@@ -38,7 +38,8 @@ public sealed record class ProjectAnalysisContext(Uri ProjectFile, RDCoreProject
 /// <remarks>
 /// Implement this in an extension to add a diagnostic of a project: the platform calls every project analyzer it knows of for each project of the workspace,
 /// and reports the findings against the project's <c>.rdproj</c>. A project analyzer is a pure function of the <see cref="ProjectAnalysisContext"/>. The
-/// analyzers of an extension are run with <see cref="ProjectAnalyzerHost"/>; an extension that has some provides <c>DiagnoseProject</c>.
+/// analyzers of an extension are run with <see cref="ProjectAnalyzerHost"/>; an extension that has some provides the
+/// <see cref="RDCore.SDK.Client.DiagnoseProject"/> capability.
 /// </remarks>
 public interface IProjectAnalyzer
 {
@@ -51,6 +52,6 @@ public interface IProjectAnalyzer
     /// What the analyzer has to say about the project.
     /// </summary>
     /// <param name="context">The project, and where its project file writes its name.</param>
-    /// <returns>Every finding, of ranges of the project file, in no particular order; none when there is nothing to say.</returns>
+    /// <returns>Every finding, at ranges of the project file, in no particular order; none when there is nothing to say.</returns>
     IEnumerable<AnalyzerFinding> Analyze(ProjectAnalysisContext context);
 }

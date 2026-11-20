@@ -417,8 +417,8 @@ public record class SemanticAnalysis(bool IsSupported = false) : CorePlatformCli
 public record class DiagnoseDocument(bool IsSupported = false) : CorePlatformClientCapability(IsSupported);
 
 /// <summary>
-/// Advertises that the declaring extension answers <c>rdcore/diagnostics/project</c>: it has project analyzers, which the language server asks of each project
-/// of the workspace, and whose findings it reports against the project's <c>.rdproj</c>.
+/// Advertises that the declaring extension answers <c>rdcore/diagnostics/project</c>: it has project analyzers. The language server asks it about each project
+/// of the workspace, and reports the findings against the project's <c>.rdproj</c>.
 /// </summary>
 /// <remarks>
 /// Declared via <c>[assembly: ProvidesCorePlatformClientCapability&lt;DiagnoseProject&gt;]</c>, and read from the extension's manifest as

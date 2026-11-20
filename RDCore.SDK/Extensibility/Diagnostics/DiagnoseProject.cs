@@ -46,7 +46,7 @@ public record class DiagnoseProjectPayload(Uri ProjectFile, RDCoreProject Projec
 }
 
 /// <summary>
-/// Response to <c>rdcore/diagnostics/project</c>: the diagnostics a provider found of the project, already projected to LSP <see cref="Diagnostic"/>s, of
+/// Response to <c>rdcore/diagnostics/project</c>: the diagnostics a provider found of the project, already projected to LSP <see cref="Diagnostic"/>s, at
 /// ranges of its project file.
 /// </summary>
 public record class DiagnoseProjectResult
