@@ -379,11 +379,11 @@ public record class RuntimeFactsDto(
 /// </param>
 /// <param name="InitialValueReads">
 /// The reads of its automatic local variables that the variable's initial value may reach (<see cref="ProcedureSemanticModel.InitialValueReads"/>);
-/// <see langword="null"/> when there are none the language core could tell.
+/// <see langword="null"/> when there are none, and when the language core could not tell.
 /// </param>
 /// <param name="UnreadAssignments">
-/// Its assignments whose value no code path reads (<see cref="ProcedureSemanticModel.UnreadAssignments"/>); <see langword="null"/> when there are none the
-/// language core could tell.
+/// Its assignments whose value no code path reads (<see cref="ProcedureSemanticModel.UnreadAssignments"/>); <see langword="null"/> when there are none,
+/// and when the language core could not tell.
 /// </param>
 public record class ProcedureSemanticsDto(
     Uri Procedure, bool IsFullyAnalyzed, ImmutableArray<CompileErrorDto> CompileErrors, ImmutableArray<ExpressionFactDto> Expressions, ReturnValueFact? ReturnValue = null,

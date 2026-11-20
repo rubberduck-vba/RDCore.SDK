@@ -272,10 +272,10 @@ public sealed record class DeclarationFact(
     public bool? IsReferredToByABoundMember { get; init; }
 
     /// <summary>
-    /// For a parameter of an interface member or of an event that the workspace declares: whether a member bound to it writes its parameter at the same
-    /// position, or passes it to a procedure that may take it by reference, an implementation of the interface member (<strong>MS-VBAL §5.3.1.9</strong>) or a
-    /// handler of the event (<strong>MS-VBAL §5.3.1.8</strong>), in any module of the workspace. <see langword="null"/> exactly when
-    /// <see cref="IsReferredToByABoundMember"/> is.
+    /// For a parameter of an interface member or of an event that the workspace declares: whether a member bound to it, in any module of the workspace,
+    /// writes its parameter at the same position or passes it to a procedure that may take it by reference. A member bound to it is an implementation of
+    /// the interface member (<strong>MS-VBAL §5.3.1.9</strong>) or a handler of the event (<strong>MS-VBAL §5.3.1.8</strong>). <see langword="null"/>
+    /// exactly when <see cref="IsReferredToByABoundMember"/> is.
     /// </summary>
     public bool? IsWrittenByABoundMember { get; init; }
 

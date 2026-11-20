@@ -4,13 +4,14 @@ namespace RDCore.SDK.Semantics.Flow;
 
 /// <summary>
 /// An assignment of a whole variable whose value no code path reads: every path from the assignment replaces the variable whole again, or ends the variable's
-/// extent (<strong>MS-VBAL §2.3</strong>), before anything reads it. The assignment is a <c>Let</c> (<strong>MS-VBAL §5.4.3.8</strong>), a <c>Set</c>
-/// (<strong>MS-VBAL §5.4.3.9</strong>), an <c>LSet</c> or an <c>RSet</c> statement.
+/// extent (<strong>MS-VBAL §2.3</strong>), before anything reads it. The assignment is a <c>Let</c> (<strong>MS-VBAL §5.4.3.8</strong>), a
+/// <c>Set</c> (<strong>MS-VBAL §5.4.3.9</strong>), an <c>LSet</c> (<strong>MS-VBAL §5.4.3.6</strong>) or an <c>RSet</c>
+/// (<strong>MS-VBAL §5.4.3.7</strong>) statement.
 /// </summary>
 /// <remarks>
 /// <para>
 /// A variable whose value outlives the procedure's invocation (a <c>ByRef</c> parameter, whose argument is the caller's; a variable of a module or of a class;
-/// a <c>Static</c> local; the result of a function or a property getter) is read once the invocation ends, so its assignment is stated only when the code that
+/// a <c>Static</c> local; the result of a function or a <c>Property Get</c>) is read once the invocation ends, so its assignment is stated only when the code that
 /// follows replaces it whole first. Code of another procedure that may run in between (a call, a property, an object created or released, an event raised) is
 /// taken to read what it can see of the variable.
 /// </para>

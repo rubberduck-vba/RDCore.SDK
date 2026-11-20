@@ -54,8 +54,8 @@ public sealed record class ProcedureSemanticModel(SemanticId Procedure, Immutabl
     public ImmutableArray<Flow.InitialValueReadFact> InitialValueReads { get; init; } = [];
 
     /// <summary>
-    /// The assignments of the procedure whose value no code path reads (<see cref="Flow.UnreadAssignmentFact"/>), in the order they are written in. The list is
-    /// empty when the language core could not tell, so an empty list says nothing about the procedure's assignments.
+    /// The assignments of the procedure whose value no code path reads (<see cref="Flow.UnreadAssignmentFact"/>), in the order they are written in. The
+    /// list is empty when the language core could not tell, so an empty list says nothing about the procedure's assignments.
     /// </summary>
     public ImmutableArray<Flow.UnreadAssignmentFact> UnreadAssignments { get; init; } = [];
 
