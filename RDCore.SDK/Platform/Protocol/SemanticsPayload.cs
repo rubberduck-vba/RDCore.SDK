@@ -477,8 +477,8 @@ public record class DeclarationBindingDto(
 /// Whether <c>Win64</c> is <c>1</c> on 64-bit Windows only in the host's sessions (<see cref="ModuleSemanticModel.Win64OnlySetOnWindows"/>).
 /// </param>
 /// <param name="Expressions">
-/// What the static pass found out about each expression of the module's declarations, outside any procedure (<see cref="ModuleSemanticModel.Expressions"/>):
-/// the value of a constant, the bounds of an array. <see langword="null"/> when there are none, and when the host does not say.
+/// What the static pass found out about each expression of the module's declarations outside any procedure, such as a constant's value or an array's
+/// bounds (<see cref="ModuleSemanticModel.Expressions"/>). <see langword="null"/> when there are none, and when the host does not say.
 /// </param>
 public record class ModuleSemanticsDto(
     Uri Module,
