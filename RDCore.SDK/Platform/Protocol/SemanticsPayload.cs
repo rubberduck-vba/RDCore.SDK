@@ -439,7 +439,9 @@ public record class DeclarationFactDto(
 /// <param name="IsBoundInSourceProject">
 /// Whether that library is a referenced project of the workspace, whose source it has (<see cref="DeclarationBinding.IsBoundInSourceProject"/>).
 /// </param>
-public record class DeclarationBindingDto(Uri Source, Uri? Bound, string? BoundLibrary = null, bool IsBoundInSourceProject = false);
+/// <param name="IsSourceAControl">Whether the source is a control of the form (<see cref="DeclarationBinding.IsSourceAControl"/>).</param>
+public record class DeclarationBindingDto(
+    Uri Source, Uri? Bound, string? BoundLibrary = null, bool IsBoundInSourceProject = false, bool IsSourceAControl = false);
 
 /// <summary>
 /// A <see cref="ModuleSemanticModel"/>, as it travels.
@@ -507,7 +509,8 @@ public record class ModuleSemanticsDto(
             declaration.DeclaredBy, declaration.Hides, declaration.ReferencedFrom, declaration.TypeKind, declaration.IsArray,
             declaration.AutoInstantiates?.Uri, declaration.CompiledOn, declaration.StatementsCompiledOn.IsDefault ? null : declaration.StatementsCompiledOn,
             declaration.Binding is { } binding
-                ? new DeclarationBindingDto(binding.Source.Uri, binding.Bound?.Uri, binding.BoundLibrary, binding.IsBoundInSourceProject)
+                ? new DeclarationBindingDto(
+                    binding.Source.Uri, binding.Bound?.Uri, binding.BoundLibrary, binding.IsBoundInSourceProject, binding.IsSourceAControl)
                 : null,
             declaration.IsUsedByReferencingProjects))],
         model.Language,

@@ -47,4 +47,10 @@ public sealed record class DeclarationBinding(SemanticId Member, DeclarationRole
     /// <see cref="BoundLibrary"/>.
     /// </summary>
     public bool IsBoundInSourceProject { get; init; }
+
+    /// <summary>
+    /// Whether <see cref="Source"/> is a control of the form the member is the code of, which the form's designer declares: the member
+    /// handles an event of the control, and is renamed with it, whatever library declares the control's class.
+    /// </summary>
+    public bool IsSourceAControl { get; init; }
 }

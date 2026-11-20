@@ -58,6 +58,16 @@ public sealed class DeclarationBindingWireTests
     }
 
     [TestMethod]
+    [DataRow(true)]
+    [DataRow(false)]
+    public void WhetherAHandlersSourceIsAControl_IsReadBackAsItWasWritten(bool isControl)
+        => Assert.AreEqual(isControl, RoundTrip(DeclarationRole.EventHandler,
+            new DeclarationBinding(new SemanticId(Handler), DeclarationRole.EventHandler, new SemanticId(Source), new SemanticId(Spun))
+            {
+                IsSourceAControl = isControl,
+            }).Binding?.IsSourceAControl);
+
+    [TestMethod]
     public void AnUnmatchedHandler_IsBoundToItsSource_AndToNoEvent()
     {
         var read = RoundTrip(DeclarationRole.UnmatchedEventHandler,
