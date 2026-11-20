@@ -11,9 +11,9 @@ namespace RDCore.SDK.Semantics.Flow;
 /// <remarks>
 /// <para>
 /// A variable whose value outlives the procedure's invocation (a <c>ByRef</c> parameter, whose argument is the caller's; a variable of a module or of a class;
-/// a <c>Static</c> local; the result of a function or a <c>Property Get</c>) is read once the invocation ends, so its assignment is stated only when the code that
-/// follows replaces it whole first. Code of another procedure that may run in between (a call, a property, an object created or released, an event raised) is
-/// taken to read what it can see of the variable.
+/// a <c>Static</c> local; the result of a function or a <c>Property Get</c>) is read once the invocation ends, so its assignment is stated only when the
+/// code that follows replaces it whole first. Code of another procedure that may run in between (a call, a property, an object created or released, an
+/// event raised) is taken to read what it can see of the variable.
 /// </para>
 /// <para>
 /// What may happen counts as happening: an error on the way, a jump, and a loop that runs no time are code paths, and an assignment that raises an error
