@@ -43,7 +43,7 @@ public interface ISessionStorage : IObjectPointers
     /// <summary>
     /// Gets the <see cref="IBindingHandle"/> of the place at <paramref name="address"/> that holds a value of <paramref name="type"/>: what is bound
     /// there, or a place inside it that starts at the address, such as a field of a record or an element of an array field of one. A reference
-    /// parameter is bound to the variable its argument is, and a field or an element is one (<strong>MS-VBAL §5.3.1.11</strong>). A record's first
+    /// parameter is bound to the variable its argument is, and a field or an element is a variable too (<strong>MS-VBAL §5.3.1.11</strong>). A record's first
     /// field starts at the record's own address; the type tells the two apart.
     /// </summary>
     /// <param name="address">The address of the place.</param>

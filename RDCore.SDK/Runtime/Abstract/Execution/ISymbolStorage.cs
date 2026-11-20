@@ -52,7 +52,7 @@ public interface ISymbolStorage
     /// <summary>
     /// Gets the <see cref="IBindingHandle"/> of the variable <paramref name="reference"/> refers to, given to a reference parameter of
     /// <paramref name="parameterType"/> (<strong>MS-VBAL §5.3.1.11</strong>). The variable is of the type the reference declares
-    /// (<see cref="VBRuntimeReference.DeclaredType"/>) when the parameter does not have it, and of the parameter's type otherwise.
+    /// (<see cref="VBRuntimeReference.DeclaredType"/>), whatever the parameter's type, and of the parameter's type when the reference declares none.
     /// </summary>
     /// <param name="reference">The reference.</param>
     /// <param name="parameterType">
