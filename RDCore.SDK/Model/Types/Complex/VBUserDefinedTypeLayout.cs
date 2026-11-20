@@ -101,8 +101,10 @@ public sealed class VBUserDefinedTypeLayout
     /// <see cref="Of(VBUserDefinedType, int)"/> returns.
     /// <para>
     /// A record of a type that has one is laid out from its own fields. For a pointer width of 4 and of 8, the type keeps the layout of the last
-    /// record laid out whose arrays all have their elements, and returns it for a record whose arrays have as many: the bounds are the
-    /// declaration's, so every record of the type has the same layout once its arrays have their elements.
+    /// record laid out whose arrays all have their elements, and returns it for a record whose arrays have the same number of elements, array by
+    /// array, nested records included. The bounds are the declaration's, so the records of one session share the layout kept. A record whose
+    /// arrays have other lengths is laid out from its fields, and its layout is kept instead. A record with an array that has no elements is laid
+    /// out from its fields and not kept.
     /// </para>
     /// </remarks>
     public static VBUserDefinedTypeLayout Of(VBUserDefinedTypeValue record, int pointerWidth = DefaultPointerWidth)
