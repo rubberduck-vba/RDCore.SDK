@@ -432,7 +432,14 @@ public record class DeclarationFactDto(
 /// The address of the event the member handles or the interface member it implements (<see cref="DeclarationBinding.Bound"/>); <see langword="null"/> for an
 /// <see cref="DeclarationRole.UnmatchedEventHandler"/>.
 /// </param>
-public record class DeclarationBindingDto(Uri Source, Uri? Bound);
+/// <param name="BoundLibrary">
+/// The library that declares the class of the event or of the interface member (<see cref="DeclarationBinding.BoundLibrary"/>); <see langword="null"/> for a
+/// class of the session's own project.
+/// </param>
+/// <param name="IsBoundInSourceProject">
+/// Whether that library is a referenced project of the workspace, whose source it has (<see cref="DeclarationBinding.IsBoundInSourceProject"/>).
+/// </param>
+public record class DeclarationBindingDto(Uri Source, Uri? Bound, string? BoundLibrary = null, bool IsBoundInSourceProject = false);
 
 /// <summary>
 /// A <see cref="ModuleSemanticModel"/>, as it travels.
@@ -499,7 +506,9 @@ public record class ModuleSemanticsDto(
             declaration.Symbol.Uri, declaration.Name, declaration.Kind, declaration.Access, declaration.IsImplicit, declaration.Location, declaration.References, declaration.Role,
             declaration.DeclaredBy, declaration.Hides, declaration.ReferencedFrom, declaration.TypeKind, declaration.IsArray,
             declaration.AutoInstantiates?.Uri, declaration.CompiledOn, declaration.StatementsCompiledOn.IsDefault ? null : declaration.StatementsCompiledOn,
-            declaration.Binding is { } binding ? new DeclarationBindingDto(binding.Source.Uri, binding.Bound?.Uri) : null,
+            declaration.Binding is { } binding
+                ? new DeclarationBindingDto(binding.Source.Uri, binding.Bound?.Uri, binding.BoundLibrary, binding.IsBoundInSourceProject)
+                : null,
             declaration.IsUsedByReferencingProjects))],
         model.Language,
         model.Class,
