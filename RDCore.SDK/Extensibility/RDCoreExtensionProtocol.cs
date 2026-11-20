@@ -14,4 +14,9 @@ public static class RDCoreExtensionProtocol
     /// Hands a diagnostics-provider extension a parsed document and asks for the diagnostics it finds.
     /// </summary>
     public const string DiagnoseDocument = "rdcore/diagnostics/document";
+
+    /// <summary>
+    /// Hands a diagnostics-provider extension a project of the workspace and asks for what its project analyzers find, of the project's <c>.rdproj</c>.
+    /// </summary>
+    public const string DiagnoseProject = "rdcore/diagnostics/project";
 }
