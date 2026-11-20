@@ -20,11 +20,11 @@ public sealed class MachineRuntimeIdentifierTests
         Assert.AreEqual($"{system}-{architecture}", PlatformManifest.MachineRuntimeIdentifier);
     }
 
-    // a manifest names the portable identifier (win-x64, linux-arm64), never a distribution's or a C library's.
+    // a manifest names the portable identifier (win-x64, linux-arm64), never a distribution's; the C library is not part of it.
     [TestMethod]
     public void TheIdentifier_IsPortable_InLowerCase()
     {
-        StringAssert.Matches(PlatformManifest.MachineRuntimeIdentifier, new System.Text.RegularExpressions.Regex("^(win|osx|linux)-[a-z0-9]+$"));
+        StringAssert.Matches(PlatformManifest.MachineRuntimeIdentifier, new System.Text.RegularExpressions.Regex("^(win|osx|linux|freebsd)-[a-z0-9]+$"));
     }
 
     [TestMethod]
