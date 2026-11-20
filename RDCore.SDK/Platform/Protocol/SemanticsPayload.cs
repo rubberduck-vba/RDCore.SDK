@@ -91,6 +91,11 @@ public record class CompileErrorDto(RDCoreDiagnosticCode Code, SourceLocation Lo
 /// For an expression bound to a procedure a <c>Declare</c> statement declares, the platforms it is compiled on and those the procedure is declared on
 /// (<see cref="ExpressionFact.NativeCall"/>); <see langword="null"/> otherwise.
 /// </param>
+/// <param name="SetCoercion">
+/// The Set-coercion of its value to a class of the workspace's projects (<see cref="ExpressionFact.SetCoercion"/>): the value of a <c>Set</c> statement
+/// (<strong>MS-VBAL §5.4.3.9</strong>), or an argument given to a parameter declared as a class (<strong>MS-VBAL §5.3.1.11</strong>);
+/// <see langword="null"/> otherwise.
+/// </param>
 public record class ExpressionFactDto(
     SyntaxNodeId Node,
     SourceLocation Location,
@@ -108,7 +113,8 @@ public record class ExpressionFactDto(
     DefaultMemberFact? DefaultMember = null,
     bool IsLetCoerced = false,
     DeclaredTypeKind? LetValueTypeKind = null,
-    NativeCallPlatforms? NativeCall = null)
+    NativeCallPlatforms? NativeCall = null,
+    SetCoercionFact? SetCoercion = null)
 {
     /// <summary>
     /// Describes a fact for the wire.
@@ -119,7 +125,8 @@ public record class ExpressionFactDto(
         var (kind, isArray) = DeclaredTypeKinds.Of(fact.DeclaredType);
         return new(fact.Node, fact.Location, fact.DeclaredType?.Name, fact.Classification, fact.Binding?.Uri, fact.Flags,
             fact.Error is null ? null : CompileErrorDto.From(fact.Error), fact.Creates, kind, isArray, fact.ConstantValue,
-            fact.Accessors, fact.LetValueType?.Name, fact.DefaultMember, fact.IsLetCoerced, DeclaredTypeKinds.Of(fact.LetValueType).Kind, fact.NativeCall);
+            fact.Accessors, fact.LetValueType?.Name, fact.DefaultMember, fact.IsLetCoerced, DeclaredTypeKinds.Of(fact.LetValueType).Kind, fact.NativeCall,
+            fact.SetCoercion);
     }
 }
 
