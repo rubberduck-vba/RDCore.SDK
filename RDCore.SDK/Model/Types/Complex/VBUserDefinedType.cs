@@ -56,7 +56,7 @@ public record class VBUserDefinedType(Symbol Symbol, ImmutableArray<VBTypeMember
 
     private NarrowedFields? _fields;
 
-    // what a record of this type is made with, once per record.
+    // the fields each record of this type is made with: narrowed once for the type's members, which every record shares.
     internal ImmutableArray<VBUserDefinedTypeFieldSymbol> DeclaredFields
     {
         get
