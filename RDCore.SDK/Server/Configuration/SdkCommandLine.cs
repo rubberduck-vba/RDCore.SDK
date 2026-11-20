@@ -12,15 +12,27 @@ namespace RDCore.SDK.Server.Configuration;
 /// error and hands back a default instance. Reading that instance as configuration is what made
 /// <c>rdc --help</c> print its help, then a stack trace underneath it, and exit -1.
 /// </remarks>
-internal static class SdkCommandLine
+public static class SdkCommandLine
 {
     /// <summary>
     /// Parses <paramref name="args"/> as <see cref="SdkAppCommandLineArgs"/>.
     /// </summary>
+    /// <remarks>
+    /// A relative <see cref="SdkAppCommandLineArgs.WorkspaceUri"/> is read against the current directory, as the shell that started the
+    /// application reads it, and becomes the full path. A full path and a URI are kept as written.
+    /// </remarks>
     /// <param name="args">The command-line arguments as received.</param>
     /// <returns>The parsed arguments.</returns>
     public static SdkAppCommandLineArgs Parse(string[] args)
-        => Parser.Default.ParseArguments<SdkAppCommandLineArgs>(args).Value;
+        => Parser.Default.ParseArguments<SdkAppCommandLineArgs>(args).Value is { } parsed
+            ? parsed with { WorkspaceUri = FullWorkspace(parsed.WorkspaceUri) }
+            : null!;
+
+    // read as a URI, as the platform reads a workspace, a relative path is rooted at "/": "." is the root, and "Ledger" a folder there.
+    private static string? FullWorkspace(string? workspace)
+        => workspace is not { Length: > 0 } || Path.IsPathFullyQualified(workspace) || Uri.TryCreate(workspace, UriKind.Absolute, out _)
+            ? workspace
+            : Path.GetFullPath(workspace);
 
     /// <summary>
     /// Answers <paramref name="args"/> when it is not a command line to run with: one that asked only
