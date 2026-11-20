@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.Runtime.InteropServices;
+using System.Text.Json.Serialization;
 
 namespace RDCore.SDK.Platform;
 
@@ -23,6 +24,20 @@ public record class PlatformManifest
     /// </summary>
     [JsonPropertyName("rid")]
     public string RuntimeIdentifier { get; init; } = string.Empty;
+
+    /// <summary>
+    /// The runtime identifier of the machine this code runs on, in the form <see cref="RuntimeIdentifier"/> takes: the operating system (<c>win</c>,
+    /// <c>osx</c> or <c>linux</c>), a hyphen, and the architecture of the running process in lower case (<c>x64</c>, <c>arm64</c>), as in <c>win-x64</c>.
+    /// </summary>
+    /// <remarks>
+    /// A platform whose manifest names this identifier was built for this machine. The value is the portable identifier, whatever the distribution of
+    /// Linux or the C library: <see cref="RuntimeInformation.RuntimeIdentifier"/> can name either (<c>ubuntu.24.04-x64</c>, <c>linux-musl-x64</c>), and a
+    /// manifest names neither. The architecture is the process's (<see cref="RuntimeInformation.ProcessArchitecture"/>): an x64 process that runs
+    /// emulated on an Arm64 machine has an <c>x64</c> identifier. The value is not read from or written to a manifest.
+    /// </remarks>
+    public static string MachineRuntimeIdentifier { get; } =
+        $"{(OperatingSystem.IsWindows() ? "win" : OperatingSystem.IsMacOS() ? "osx" : "linux")}-"
+        + RuntimeInformation.ProcessArchitecture.ToString().ToLowerInvariant();
 
     /// <summary>When the manifest was written, in UTC.</summary>
     public DateTime GeneratedUtc { get; init; } = default;
