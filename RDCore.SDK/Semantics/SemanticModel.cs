@@ -164,6 +164,14 @@ public sealed record class ModuleSemanticModel(
     public bool Win64OnlySetOnWindows { get; init; }
 
     /// <summary>
+    /// What the static pass found out about each expression of the module's declarations outside any procedure (a constant's value, an array's
+    /// bounds), by the expression, as <see cref="ProcedureSemanticModel.Expressions"/> holds those of a procedure's body. A name there is bound as it is
+    /// in a procedure (<see cref="ExpressionFact.Binding"/>), to a declaration of the module or of another (<c>Const C = Globals.N + 1</c>). Empty when
+    /// the pass had no workspace to resolve names in, and when the host does not say.
+    /// </summary>
+    public ImmutableDictionary<SyntaxNodeId, ExpressionFact> Expressions { get; init; } = ImmutableDictionary<SyntaxNodeId, ExpressionFact>.Empty;
+
+    /// <summary>
     /// Every compile error of the module: those of its declarations, then those of each procedure.
     /// </summary>
     public ImmutableArray<VBCompileErrorInfo> CompileErrors => [.. DeclarationErrors, .. Procedures.SelectMany(procedure => procedure.CompileErrors)];
