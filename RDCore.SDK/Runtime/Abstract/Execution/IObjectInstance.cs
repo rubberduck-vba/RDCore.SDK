@@ -78,18 +78,18 @@ public interface IObjectInstance
     bool TryResolve(Symbol field, [NotNullWhen(true)][MaybeNullWhen(false)] out IBindingHandle? value);
 
     /// <summary>
-    /// Gets the <see cref="IBindingHandle"/> this instance holds the field at <paramref name="field"/> in <see cref="Fields"/> in, as
+    /// Gets the <see cref="IBindingHandle"/> of the field at index <paramref name="field"/> of <see cref="Fields"/>, as
     /// <see cref="TryResolve(Symbol, out IBindingHandle?)"/> does, without looking the field up by its symbol.
     /// </summary>
     /// <param name="field">The field's index in <see cref="Fields"/>.</param>
     /// <param name="value">The binding; <see langword="null"/> when <paramref name="field"/> is not an index in <see cref="Fields"/>.</param>
-    /// <returns>Whether this instance holds a field at <paramref name="field"/>.</returns>
+    /// <returns>Whether <paramref name="field"/> is an index in <see cref="Fields"/>.</returns>
     bool TryResolve(int field, [NotNullWhen(true)][MaybeNullWhen(false)] out IBindingHandle? value);
 
     /// <summary>
     /// Gets the <see cref="IBindingHandle"/> this instance holds <paramref name="field"/> in, when one was made: none for a field that holds its
     /// initial value, whose binding nothing has asked for (<see cref="TryResolve(Symbol, out IBindingHandle?)"/>, <see cref="GetValue"/>,
-    /// <see cref="TryGetAddress"/>). An initial value holds no object.
+    /// <see cref="TryGetAddress"/>). A field with no binding holds no object: its initial value holds none.
     /// </summary>
     /// <param name="field">The field, or a <c>Static</c> local this instance holds.</param>
     /// <param name="value">The binding; <see langword="null"/> when none was made.</param>
