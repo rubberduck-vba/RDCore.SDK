@@ -474,7 +474,7 @@ public interface ISessionSymbols
     bool TryGetInstance(VBRuntimeObjectId objectId, [NotNullWhen(true)][MaybeNullWhen(false)] out IObjectInstance? instance);
 
     /// <summary>
-    /// Frees the address every field of <paramref name="objectId"/>'s instance was given and forgets it. Called once
+    /// Frees the addresses the fields of <paramref name="objectId"/>'s instance were given, and forgets the instance. Called once
     /// the object's reference count reaches zero and <see cref="ISessionObjects.TryRemoveObject"/>
     /// succeeds.
     /// </summary>
