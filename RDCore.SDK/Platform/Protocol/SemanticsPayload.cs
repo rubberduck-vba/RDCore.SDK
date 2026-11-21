@@ -96,6 +96,10 @@ public record class CompileErrorDto(RDCoreDiagnosticCode Code, SourceLocation Lo
 /// (<strong>MS-VBAL §5.4.3.9</strong>), or an argument given to a parameter declared as a class (<strong>MS-VBAL §5.3.1.11</strong>);
 /// <see langword="null"/> otherwise.
 /// </param>
+/// <param name="StringForm">
+/// For an expression bound to a function of a library that returns a <c>Variant</c>, the name of the member that is functionally identical to it except
+/// that it returns a <c>String</c> (<see cref="ExpressionFact.StringForm"/>); <see langword="null"/> otherwise.
+/// </param>
 public record class ExpressionFactDto(
     SyntaxNodeId Node,
     SourceLocation Location,
@@ -114,7 +118,8 @@ public record class ExpressionFactDto(
     bool IsLetCoerced = false,
     DeclaredTypeKind? LetValueTypeKind = null,
     NativeCallPlatforms? NativeCall = null,
-    SetCoercionFact? SetCoercion = null)
+    SetCoercionFact? SetCoercion = null,
+    string? StringForm = null)
 {
     /// <summary>
     /// Describes a fact for the wire.
@@ -126,7 +131,7 @@ public record class ExpressionFactDto(
         return new(fact.Node, fact.Location, fact.DeclaredType?.Name, fact.Classification, fact.Binding?.Uri, fact.Flags,
             fact.Error is null ? null : CompileErrorDto.From(fact.Error), fact.Creates, kind, isArray, fact.ConstantValue,
             fact.Accessors, fact.LetValueType?.Name, fact.DefaultMember, fact.IsLetCoerced, DeclaredTypeKinds.Of(fact.LetValueType).Kind, fact.NativeCall,
-            fact.SetCoercion);
+            fact.SetCoercion, fact.StringForm);
     }
 }
 
