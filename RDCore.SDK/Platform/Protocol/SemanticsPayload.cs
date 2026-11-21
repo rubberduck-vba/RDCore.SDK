@@ -377,9 +377,18 @@ public record class RuntimeFactsDto(
 /// <param name="Arguments">
 /// The arguments of its calls that the pass mapped to a parameter, with what the procedure called declares of it; <see langword="null"/> when there are none.
 /// </param>
+/// <param name="InitialValueReads">
+/// The reads of its automatic local variables that the variable's initial value may reach (<see cref="ProcedureSemanticModel.InitialValueReads"/>);
+/// <see langword="null"/> when there are none, and when the language core could not tell.
+/// </param>
+/// <param name="UnreadAssignments">
+/// Its assignments whose value no code path reads (<see cref="ProcedureSemanticModel.UnreadAssignments"/>); <see langword="null"/> when there are none,
+/// and when the language core could not tell.
+/// </param>
 public record class ProcedureSemanticsDto(
     Uri Procedure, bool IsFullyAnalyzed, ImmutableArray<CompileErrorDto> CompileErrors, ImmutableArray<ExpressionFactDto> Expressions, ReturnValueFact? ReturnValue = null,
-    RuntimeFactsDto? Runtime = null, ImmutableArray<EmptiedControlReadFact>? EmptiedControlReads = null, ImmutableArray<ArgumentFact>? Arguments = null);
+    RuntimeFactsDto? Runtime = null, ImmutableArray<EmptiedControlReadFact>? EmptiedControlReads = null, ImmutableArray<ArgumentFact>? Arguments = null,
+    ImmutableArray<InitialValueReadFact>? InitialValueReads = null, ImmutableArray<UnreadAssignmentFact>? UnreadAssignments = null);
 
 /// <summary>
 /// A <see cref="DeclarationFact"/>, as it travels.
@@ -420,12 +429,16 @@ public record class ProcedureSemanticsDto(
 /// For a parameter of an interface member or of an event, whether an implementation or a handler refers to its parameter at the same position
 /// (<see cref="DeclarationFact.IsReferredToByABoundMember"/>); <see langword="null"/> when that is not stated.
 /// </param>
+/// <param name="IsWrittenByABoundMember">
+/// For a parameter of an interface member or of an event, whether an implementation or a handler writes its parameter at the same position, or passes it on
+/// by reference (<see cref="DeclarationFact.IsWrittenByABoundMember"/>); <see langword="null"/> when that is not stated.
+/// </param>
 public record class DeclarationFactDto(
     Uri Symbol, string Name, DeclarationKind Kind, AccessModifier Access, bool IsImplicit, SourceLocation Location, DeclarationReferences? References,
     DeclarationRole Role = DeclarationRole.None, LocalDeclarationKind? DeclaredBy = null, HiddenDeclaration? Hides = null,
     ImmutableArray<DeclarationReference>? ReferencedFrom = null, DeclaredTypeKind? TypeKind = null, bool IsArray = false, Uri? AutoInstantiates = null,
     CompiledPlatforms? CompiledOn = null, ImmutableArray<CompiledPlatforms>? StatementsCompiledOn = null, DeclarationBindingDto? Binding = null,
-    bool IsUsedByReferencingProjects = false, bool? IsReferredToByABoundMember = null);
+    bool IsUsedByReferencingProjects = false, bool? IsReferredToByABoundMember = null, bool? IsWrittenByABoundMember = null);
 
 /// <summary>
 /// A <see cref="DeclarationBinding"/>, as it travels: the member it binds is the declaration it is the binding of, and its role is the declaration's
@@ -507,7 +520,9 @@ public record class ModuleSemanticsDto(
             procedure.ReturnValue,
             procedure.Runtime is null ? null : RuntimeFactsDto.From(procedure.Runtime),
             procedure.EmptiedControlReads.IsDefaultOrEmpty ? null : procedure.EmptiedControlReads,
-            procedure.Arguments.IsDefaultOrEmpty ? null : procedure.Arguments))],
+            procedure.Arguments.IsDefaultOrEmpty ? null : procedure.Arguments,
+            procedure.InitialValueReads.IsDefaultOrEmpty ? null : procedure.InitialValueReads,
+            procedure.UnreadAssignments.IsDefaultOrEmpty ? null : procedure.UnreadAssignments))],
         [.. model.Declarations.Select(declaration => new DeclarationFactDto(
             declaration.Symbol.Uri, declaration.Name, declaration.Kind, declaration.Access, declaration.IsImplicit, declaration.Location, declaration.References, declaration.Role,
             declaration.DeclaredBy, declaration.Hides, declaration.ReferencedFrom, declaration.TypeKind, declaration.IsArray,
@@ -516,7 +531,7 @@ public record class ModuleSemanticsDto(
                 ? new DeclarationBindingDto(
                     binding.Source.Uri, binding.Bound?.Uri, binding.BoundLibrary, binding.IsBoundInSourceProject, binding.IsSourceAControl)
                 : null,
-            declaration.IsUsedByReferencingProjects, declaration.IsReferredToByABoundMember))],
+            declaration.IsUsedByReferencingProjects, declaration.IsReferredToByABoundMember, declaration.IsWrittenByABoundMember))],
         model.Language,
         model.Class,
         model.Document,
