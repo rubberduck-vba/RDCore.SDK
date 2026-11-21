@@ -60,17 +60,41 @@ public interface IObjectInstance
     IReadOnlyCollection<Symbol> StaticLocals { get; }
 
     /// <summary>
-    /// Gets the <see cref="IBindingHandle"/> currently held on this instance for the specified
-    /// instance field <see cref="Symbol"/>.
+    /// Gets the <see cref="IBindingHandle"/> this instance holds <paramref name="field"/> in, as <see cref="TryResolve(Symbol, out IBindingHandle?)"/>
+    /// does.
     /// </summary>
-    /// <exception cref="KeyNotFoundException">No binding exists for <paramref name="field"/> on this instance.</exception>
+    /// <param name="field">The field, or a <c>Static</c> local this instance holds.</param>
+    /// <returns>The binding.</returns>
+    /// <exception cref="KeyNotFoundException">This instance holds no such field.</exception>
     IBindingHandle GetValue(Symbol field);
 
     /// <summary>
-    /// Gets the <see cref="IBindingHandle"/> currently held on this instance for the specified
-    /// instance field <see cref="Symbol"/>, if any.
+    /// Gets the <see cref="IBindingHandle"/> this instance holds <paramref name="field"/> in. A field holds its initial value until its binding is
+    /// asked for: the binding is made then, of that value, and is the same from then on.
     /// </summary>
+    /// <param name="field">The field, or a <c>Static</c> local this instance holds.</param>
+    /// <param name="value">The binding; <see langword="null"/> when this instance holds no such field.</param>
+    /// <returns>Whether this instance holds <paramref name="field"/>.</returns>
     bool TryResolve(Symbol field, [NotNullWhen(true)][MaybeNullWhen(false)] out IBindingHandle? value);
+
+    /// <summary>
+    /// Gets the <see cref="IBindingHandle"/> this instance holds the field at <paramref name="field"/> in <see cref="Fields"/> in, as
+    /// <see cref="TryResolve(Symbol, out IBindingHandle?)"/> does, without looking the field up by its symbol.
+    /// </summary>
+    /// <param name="field">The field's index in <see cref="Fields"/>.</param>
+    /// <param name="value">The binding; <see langword="null"/> when <paramref name="field"/> is not an index in <see cref="Fields"/>.</param>
+    /// <returns>Whether this instance holds a field at <paramref name="field"/>.</returns>
+    bool TryResolve(int field, [NotNullWhen(true)][MaybeNullWhen(false)] out IBindingHandle? value);
+
+    /// <summary>
+    /// Gets the <see cref="IBindingHandle"/> this instance holds <paramref name="field"/> in, when one was made: none for a field that holds its
+    /// initial value, whose binding nothing has asked for (<see cref="TryResolve(Symbol, out IBindingHandle?)"/>, <see cref="GetValue"/>,
+    /// <see cref="TryGetAddress"/>). An initial value holds no object.
+    /// </summary>
+    /// <param name="field">The field, or a <c>Static</c> local this instance holds.</param>
+    /// <param name="value">The binding; <see langword="null"/> when none was made.</param>
+    /// <returns>Whether a binding was made for <paramref name="field"/>.</returns>
+    bool TryGetBinding(Symbol field, [NotNullWhen(true)][MaybeNullWhen(false)] out IBindingHandle? value);
 
     /// <summary>
     /// Gets the address of the specified instance field <see cref="Symbol"/>: given the first time one is asked for, and the same for as long as the
