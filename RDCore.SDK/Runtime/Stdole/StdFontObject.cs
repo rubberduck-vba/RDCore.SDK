@@ -166,7 +166,7 @@ public sealed class StdFontObject
     /// </summary>
     /// <remarks>
     /// This is the size for whoever draws the font or copies its values, where reading <see cref="Size"/> would change which size a later
-    /// name snaps from: after this read, <see cref="TrySetName"/> snaps the size held as if no size had been read.
+    /// name snaps from: this read leaves the size <see cref="TrySetName"/> snaps from as it was, and raises no <see cref="Changed"/>.
     /// </remarks>
     public decimal SizeAsDrawn
     {
