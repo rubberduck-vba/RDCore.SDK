@@ -42,7 +42,7 @@ public static class RefactoringTitles
 
     /// <summary>
     /// The title of the code action that makes the fix of every diagnostic of a code in every module of the workspace at once:
-    /// <c>Fix every RDC01025 in the workspace</c>.
+    /// <c>Fix every RDC01025 in this workspace</c>.
     /// </summary>
     /// <param name="code">The code.</param>
     /// <param name="culture">The language of the reader; the current UI culture by default.</param>

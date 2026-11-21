@@ -160,7 +160,7 @@
     <value>Fix every {0} in this module</value>
   </data>
   <data name="CodeAction_FixAll_Workspace" xml:space="preserve">
-    <value>Fix every {0} in the workspace</value>
+    <value>Fix every {0} in this workspace</value>
   </data>
   <data name="SettingList_NotTaken" xml:space="preserve">
     <value>This client does not accept changes to its settings from the language server.</value>

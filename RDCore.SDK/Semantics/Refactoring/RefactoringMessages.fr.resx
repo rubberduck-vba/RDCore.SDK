@@ -160,7 +160,7 @@
     <value>Corriger chaque {0} dans ce module</value>
   </data>
   <data name="CodeAction_FixAll_Workspace" xml:space="preserve">
-    <value>Corriger chaque {0} dans l'espace de travail</value>
+    <value>Corriger chaque {0} dans cet espace de travail</value>
   </data>
   <data name="SettingList_NotTaken" xml:space="preserve">
     <value>Ce client n'accepte pas que le serveur de langage modifie ses paramètres.</value>
