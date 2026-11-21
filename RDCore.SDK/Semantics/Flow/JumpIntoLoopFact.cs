@@ -3,7 +3,7 @@ using RDCore.SDK.Model.Source;
 namespace RDCore.SDK.Semantics.Flow;
 
 /// <summary>
-/// The statement that jumps to a label.
+/// The statement of a <see cref="JumpIntoLoopFact"/>: the statement that jumps to a label inside the loop.
 /// </summary>
 public enum JumpStatementKind
 {
