@@ -132,7 +132,8 @@ public sealed class DiagnosticFixesTests
     [DataRow(3, true, DisplayName = "a fix that changes what the code does")]
     public void AFixOfAnotherVersion_OrThatChangesWhatTheCodeDoes_IsNotTaken(int version, bool changesBehavior)
     {
-        var (fixedOnes, _) = DiagnosticFixes.OfEvery([Found(Fixed, 1, "a"), Found(Fixed, 2, "b", version: version, changesBehavior: changesBehavior)], Fixed, version: 3);
+        var (fixedOnes, _) = DiagnosticFixes.OfEvery(
+            [Found(Fixed, 1, "a"), Found(Fixed, 2, "b", version: version, changesBehavior: changesBehavior)], Fixed, version: 3);
 
         CollectionAssert.AreEqual(new[] { "a" }, fixedOnes.Select(diagnostic => diagnostic.Message).ToArray());
     }

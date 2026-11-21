@@ -110,7 +110,8 @@ public sealed record class DiagnosticFixes
     /// <param name="code">The code whose diagnostics are fixed.</param>
     /// <param name="version">The version of the document the edits are made of (<see cref="EditFix.Version"/>).</param>
     /// <returns>The diagnostics whose fixes are taken, and the edits of those fixes, none of them overlapping another.</returns>
-    public static (IReadOnlyList<Diagnostic> Fixed, IReadOnlyList<TextEdit> Edits) OfEvery(IEnumerable<Diagnostic> diagnostics, RDCoreDiagnosticCode code, int version)
+    public static (IReadOnlyList<Diagnostic> Fixed, IReadOnlyList<TextEdit> Edits) OfEvery(
+        IEnumerable<Diagnostic> diagnostics, RDCoreDiagnosticCode code, int version)
     {
         var fixedOnes = new List<Diagnostic>();
         var taken = new List<TextEdit>();
