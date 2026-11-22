@@ -242,8 +242,8 @@ public class RDCoreServerProcess(
             ? $"--define {string.Join(" ", defines.Select(define => Quoted($"{define.Key}={define.Value}")))} "
             : null;
 
-        // the workspace is quoted as a constant is: a folder's path that ends with its separator would otherwise escape the closing quote, and the rest of the
-        // command line would be read as the workspace.
+        // the workspace is quoted as a --define value is: a folder's path that ends with its separator would otherwise escape the closing quote, and the
+        // rest of the command line would be read as the workspace.
         return $"-p {clientProcessId} -n {pipeName} -w {Quoted(workspace)} {languageArgument}{definesArgument}-t {trace} {(verbose ? "-v" : null)}";
     }
 
