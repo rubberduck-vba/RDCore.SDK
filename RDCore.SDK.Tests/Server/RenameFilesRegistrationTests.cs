@@ -14,8 +14,8 @@ namespace RDCore.Tests.Server;
 
 /// <summary>
 /// A server that handles <c>workspace/didRenameFiles</c> and <c>workspace/willRenameFiles</c> (<see cref="DidRenameWorkspaceFilesParams"/>,
-/// <see cref="WillRenameWorkspaceFilesParams"/>) states them in its <c>initialize</c> result, and does not register them dynamically: OmniSharp registered them
-/// with no options, VS Code's client threw on the missing <c>filters</c>, and dropped every registration after them, completion among them.
+/// <see cref="WillRenameWorkspaceFilesParams"/>) does not ask a client to register them dynamically. OmniSharp would register them with no options, and
+/// VS Code's client throws on the missing <c>filters</c> and drops every registration after them in the same request, completion among them.
 /// </summary>
 [TestClass]
 public sealed class RenameFilesRegistrationTests
@@ -27,7 +27,8 @@ public sealed class RenameFilesRegistrationTests
 
     private sealed class WillRename : IJsonRpcRequestHandler<WillRenameWorkspaceFilesParams, WorkspaceEdit?>
     {
-        public Task<WorkspaceEdit?> Handle(WillRenameWorkspaceFilesParams request, CancellationToken cancellationToken) => Task.FromResult<WorkspaceEdit?>(null);
+        public Task<WorkspaceEdit?> Handle(WillRenameWorkspaceFilesParams request, CancellationToken cancellationToken) =>
+            Task.FromResult<WorkspaceEdit?>(null);
     }
 
     // the methods a client that registers file operations and completion dynamically, as VS Code does, is asked to register by a server that handles both
