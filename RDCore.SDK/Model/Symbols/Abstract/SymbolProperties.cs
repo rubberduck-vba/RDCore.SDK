@@ -142,7 +142,7 @@ public static class SymbolProperties
     /// </summary>
     /// <remarks>
     /// <list type="bullet">
-    /// <item>A module of a workspace, its members and its module variables: what the module writes (<see cref="AST.ModuleDescriptions"/>). The
+    /// <item>A module of a workspace, its members and its module variables: what the module writes (<see cref="AST.DocStrings"/>). The
     /// <c>VB_Description</c> or <c>VB_VarDescription</c> attribute when it writes one, else the <c>'@ModuleDescription</c>, <c>'@Description</c> or
     /// <c>'@VariableDescription</c> annotation.</item>
     /// <item>A library, and its classes, modules, enumerations, constants, members and events: the help string of its description

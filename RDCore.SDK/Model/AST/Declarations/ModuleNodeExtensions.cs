@@ -246,7 +246,7 @@ public static class ModuleNodeExtensions
     /// <param name="module">The module.</param>
     /// <remarks>
     /// The value is a string literal: its quotes are not part of the text, and a doubled quote in it is one. An empty string describes nothing. A
-    /// <c>'@ModuleDescription</c> annotation is trivia, which no node of the tree holds: <see cref="ModuleDescriptions.GetModuleDescription"/> reads the
+    /// <c>'@ModuleDescription</c> annotation is trivia, which no node of the tree holds: <see cref="DocStrings.GetModuleDescription"/> reads the
     /// attribute, else the annotation.
     /// </remarks>
     public static string? GetModuleDescription(this ModuleNode module)
@@ -269,7 +269,7 @@ public static class ModuleNodeExtensions
     /// <param name="memberName">The name of the member, compared without regard to case.</param>
     /// <remarks>
     /// The value is a string literal: its quotes are not part of the text, and a doubled quote in it is one. An empty string describes nothing. A
-    /// <c>'@Description</c> annotation is trivia, which no node of the tree holds: <see cref="ModuleDescriptions.GetMemberDescription"/> reads the attribute,
+    /// <c>'@Description</c> annotation is trivia, which no node of the tree holds: <see cref="DocStrings.GetMemberDescription"/> reads the attribute,
     /// else the annotation.
     /// </remarks>
     public static string? GetMemberDescription(this ModuleNode module, string memberName)
@@ -284,7 +284,7 @@ public static class ModuleNodeExtensions
     /// <remarks>
     /// The directive is written at module level, after the variable's declaration, and not in a procedure's body as a member's attributes are. Its value is
     /// read as <see cref="GetMemberDescription(ModuleNode, string)"/> reads a member's. A <c>'@VariableDescription</c> annotation is trivia:
-    /// <see cref="ModuleDescriptions.GetMemberDescription"/> reads the attribute, else the annotation.
+    /// <see cref="DocStrings.GetMemberDescription"/> reads the attribute, else the annotation.
     /// </remarks>
     public static string? GetVariableDescription(this ModuleNode module, string variableName)
         => module.Children.OfType<AttributeDirectiveNode>()

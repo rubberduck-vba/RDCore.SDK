@@ -8,8 +8,9 @@ using System.Runtime.CompilerServices;
 namespace RDCore.SDK.Model.AST;
 
 /// <summary>
-/// The descriptions a parsed module writes: the short documentation strings an editor shows for the module, its members and its variables in a hover, a
-/// completion list or signature help, as the VBE's Object Browser shows them.
+/// The descriptions a parsed module writes, which its symbols carry as <see cref="Symbols.Abstract.SymbolProperties.DocString"/>: the short documentation
+/// strings an editor shows for the module, its members and its variables in a hover, a completion list or signature help, as the VBE's Object Browser
+/// shows them.
 /// </summary>
 /// <remarks>
 /// A description is written with an attribute (<strong>RD-VBAL §3.1.1.7</strong> <c>VB_Description</c>, and <c>VB_VarDescription</c> for a module
@@ -26,7 +27,7 @@ namespace RDCore.SDK.Model.AST;
 /// argument is not a string, describe nothing.
 /// </para>
 /// </remarks>
-public static class ModuleDescriptions
+public static class DocStrings
 {
     /// <summary>
     /// The name of the annotation that describes a module: <c>'@ModuleDescription("...")</c>.
