@@ -153,6 +153,132 @@ public sealed class ConditionalCompilationBlocks
         return branchesAt;
     }
 
+    /// <summary>
+    /// The branch each dead location is, as <see cref="BranchesAt"/> numbers the blocks and their branches with every block counted: the branch that holds
+    /// all of the location, the innermost one when branches are nested (<strong>MS-VBAL §3.4</strong>). A location that no branch holds is no branch.
+    /// </summary>
+    /// <param name="dead">Where the dead branches are, each in the file it is written in, as the environment host says them
+    /// (<see cref="Platform.Components.DefineSymbolsResult.DeadBranches"/>) for the parse these blocks were read off.</param>
+    /// <returns>Each branch once, in the order of <paramref name="dead"/>.</returns>
+    /// <remarks>
+    /// A branch is said by its ordinals, not where it is written, so it is the same branch in an edited parse of the module, whose positions are not the
+    /// ones evaluated, as long as the edit leaves the blocks their shape (<see cref="HasShapeOf"/>). <see cref="DeadTest"/> reads them back.
+    /// </remarks>
+    public IReadOnlyList<(int Block, int Branch)> DeadOrdinals(IEnumerable<SourceLocation> dead)
+    {
+        var ordinals = new List<(int Block, int Branch)>();
+        foreach (var location in dead)
+        {
+            (int Block, int Branch)? innermost = null;
+            var ordinal = 0;
+
+            // a block nested in a branch comes after the block of that branch: the last that holds the location is the innermost.
+            foreach (var branches in _blocks)
+            {
+                if (branches.IsDefaultOrEmpty)
+                {
+                    continue;
+                }
+
+                if (BranchHolding(branches, location) is var branch and >= 0)
+                {
+                    innermost = (ordinal, branch);
+                }
+
+                ordinal++;
+            }
+
+            if (innermost is { } found && !ordinals.Contains(found))
+            {
+                ordinals.Add(found);
+            }
+        }
+
+        return ordinals;
+    }
+
+    /// <summary>
+    /// Whether what is written at a location is in a dead branch of these blocks: in one of the <paramref name="dead"/> branches, or in a branch nested in
+    /// one, whatever the nested branch is said to be (<strong>MS-VBAL §3.4</strong>: a dead branch is not part of the module, and nothing in it is).
+    /// </summary>
+    /// <param name="dead">The dead branches, as <see cref="DeadOrdinals"/> gives them for a parse whose blocks have the shape of these
+    /// (<see cref="HasShapeOf"/>).</param>
+    /// <returns>A test of where something is written, its file and the start of its range: false everywhere when no branch is dead.</returns>
+    public Func<SourceLocation, bool> DeadTest(IReadOnlyCollection<(int Block, int Branch)> dead)
+    {
+        if (dead.Count == 0)
+        {
+            return static _ => false;
+        }
+
+        var branches = dead.ToHashSet();
+        return location => BranchesAt(location, static _ => true).Any(branches.Contains);
+    }
+
+    /// <summary>
+    /// Whether two parses of a module have blocks of the same shape (<strong>MS-VBAL §3.4</strong>): as many blocks, in the same order, each in the same
+    /// file, nested in the same branch, with the same branches, and each branch holding something in both or in neither. The branches of one are then the
+    /// branches of the other, ordinal for ordinal, wherever an edit moved them in their file.
+    /// </summary>
+    /// <param name="other">The blocks of the other parse.</param>
+    public bool HasShapeOf(ConditionalCompilationBlocks other)
+    {
+        if (_blocks.Length != other._blocks.Length)
+        {
+            return false;
+        }
+
+        for (var index = 0; index < _blocks.Length; index++)
+        {
+            var (mine, theirs) = (_blocks[index], other._blocks[index]);
+            if (_shapes[index] != other._shapes[index] || mine.Length != theirs.Length)
+            {
+                return false;
+            }
+
+            if (mine.IsDefaultOrEmpty)
+            {
+                continue;
+            }
+
+            if (mine[0].Uri != theirs[0].Uri || ParentOf(index) != other.ParentOf(index))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    // the branch a block is nested in, by the index of its block: the nearest block before it that holds it is the innermost.
+    private (int Block, int Branch)? ParentOf(int index)
+    {
+        var extent = Extent(_blocks[index]);
+        for (var before = index - 1; before >= 0; before--)
+        {
+            if (!_blocks[before].IsDefaultOrEmpty && BranchHolding(_blocks[before], extent) is var branch and >= 0)
+            {
+                return (before, branch);
+            }
+        }
+
+        return null;
+    }
+
+    // the branch that holds all of a location, in its file; none when no branch does.
+    private static int BranchHolding(ImmutableArray<SourceLocation> branches, SourceLocation location)
+    {
+        for (var index = 0; index < branches.Length; index++)
+        {
+            if (branches[index].Uri == location.Uri && location.Range.Start >= branches[index].Range.Start && location.Range.End <= branches[index].Range.End)
+            {
+                return index;
+            }
+        }
+
+        return -1;
+    }
+
     // a block, from the start of its first branch to the end of its last, in the file it is written in.
     private static SourceLocation Extent(ImmutableArray<SourceLocation> branches)
         => branches[0] with { Range = new SourceRange(branches[0].Range.Start, branches[^1].Range.End) };
