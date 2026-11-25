@@ -65,8 +65,9 @@ public static class SymbolProperties
     /// <remarks>
     /// The language server reads every branch, and cannot tell which is live: a name that a module-level <c>#If</c> branch declares matches that declaration
     /// there. MS-VBA compiles the live branch only, so where that declaration is dead the name matches nothing, and the procedure declares it.
+    /// Each is a location, its document and the start of its range: a module written in several files may declare the name in a file other than the local's.
     /// </remarks>
-    public static readonly SymbolProperty<System.Collections.Immutable.ImmutableArray<Source.SourcePosition>> UnlessLive = new(nameof(UnlessLive));
+    public static readonly SymbolProperty<System.Collections.Immutable.ImmutableArray<Source.SourceLocation>> UnlessLive = new(nameof(UnlessLive));
     /// <summary>
     /// Whether a member of a form's class is one of the form's controls: declared by the form's designer, not by its code
     /// (<see cref="Workspace.Forms.FormDescriptor.DeclaredControls"/>).

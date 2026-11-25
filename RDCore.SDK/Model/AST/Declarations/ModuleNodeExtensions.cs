@@ -301,13 +301,14 @@ public static class ModuleNodeExtensions
         => [.. ImplementsDirectivesOf(module).Select(directive => directive.Name)];
 
     /// <summary>
-    /// Where each of <see cref="GetImplementedInterfaceNames"/> is written: the source range of its <c>Implements</c> directive,
-    /// one for each name and in the same order.
+    /// Where each of <see cref="GetImplementedInterfaceNames"/> is written: the file and the range of its <c>Implements</c> directive,
+    /// one for each name and in the same order. Each location's file is the one its directive is written in.
     /// </summary>
-    public static ImmutableArray<SourceRange> GetImplementedInterfaceRanges(this ModuleNode module)
-        => [.. ImplementsDirectivesOf(module).Select(directive => directive.Range)];
+    /// <param name="module">The module whose directives are read.</param>
+    public static ImmutableArray<SourceLocation> GetImplementedInterfaceLocations(this ModuleNode module)
+        => [.. ImplementsDirectivesOf(module).Select(directive => directive.Location)];
 
-    private static IEnumerable<(string Name, SourceRange Range)> ImplementsDirectivesOf(ModuleNode module)
+    private static IEnumerable<(string Name, SourceLocation Location)> ImplementsDirectivesOf(ModuleNode module)
     {
         foreach (var directive in module.Children.OfType<ImplementsDirectiveNode>())
         {
@@ -319,7 +320,7 @@ public static class ModuleNodeExtensions
             };
             if (name is not null)
             {
-                yield return (name, directive.Location.Range);
+                yield return (name, directive.Location);
             }
         }
     }
