@@ -272,14 +272,15 @@ public record class DefineSymbolsResult
 
     /// <summary>
     /// Where the bodies of the module's dead <c>#If</c> branches are, as the host evaluated the request's directives with the session's constants and the
-    /// module's own (<strong>MS-VBAL §3.4</strong>): one location per dead branch, in the file it is written in. Empty when every branch is live, or when the
-    /// request carried no <see cref="DefineSymbolsParams.PrecompilerTriviaJson"/>.
+    /// module's own (<strong>MS-VBAL §3.4</strong>): one location per dead branch that holds something, in the file it is written in. Empty when every
+    /// branch is live, or when the request carried no <see cref="DefineSymbolsParams.PrecompilerTriviaJson"/>.
     /// </summary>
     /// <remarks>
     /// What a dead branch declares is not part of the module, so a client that checks the module's declarations reads them as the host compiles them by
-    /// skipping these branches. A location is one of the parse the request was built from: <see cref="Semantics.ConditionalCompilationBlocks.DeadOrdinals"/>
-    /// gives the branches it names, which hold in an edited parse of the module as long as its blocks keep their shape
-    /// (<see cref="Semantics.ConditionalCompilationBlocks.HasShapeOf"/>). A host that does not say them leaves this empty, which reads as every branch live.
+    /// skipping these branches. Each location is a position of the parse the request was built from.
+    /// <see cref="Semantics.ConditionalCompilationBlocks.DeadOrdinals"/> gives the branches they name, which are the same branches in an edited parse of the
+    /// module as long as its blocks keep their shape (<see cref="Semantics.ConditionalCompilationBlocks.HasShapeOf"/>). A host that does not report them
+    /// leaves this empty, which reads as every branch live.
     /// </remarks>
     public IReadOnlyList<SourceLocation> DeadBranches { get; init; } = [];
 }
