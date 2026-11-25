@@ -109,7 +109,7 @@ public sealed class ProgramEntryPointTests
         CollectionAssert.AreEqual(new[] { "Backup", "Restore" }, resolved.Candidates.Select(candidate => candidate.Name).ToArray());
     }
 
-    // a project of several scripts runs the one it names by its module's name, whatever the case: the others' procedures are modules its code uses.
+    // a project of several scripts runs the one it names by its module's name, whatever the case: the others are modules its code can call into.
     [TestMethod]
     [DataRow("Restore")]
     [DataRow("rESTORE", DisplayName = "names are compared without regard to case")]
@@ -124,7 +124,7 @@ public sealed class ProgramEntryPointTests
         Assert.IsNull(resolved.Refusal);
     }
 
-    // a name that is a script's module and a procedure too is refused, naming both modules: the run does not pick one.
+    // a name that is a script's module and a procedure too is refused, naming the module of each: the run does not pick one.
     [TestMethod]
     [DataRow("Tools", DisplayName = "a procedure of another module")]
     [DataRow("Backup", DisplayName = "a procedure of the script's own module")]

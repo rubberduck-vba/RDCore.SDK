@@ -73,9 +73,10 @@ public static class ProgramEntryPoint
     /// </para>
     /// <para>
     /// A name with no module is also the name of a script: the standard module of that name, when it is a script (it declares <see cref="ScriptName"/>),
-    /// starts at its script, as <c>Backup.(Script)</c> names it. A project of several scripts runs the one it names this way, and the other scripts'
-    /// procedures and blocks are modules its code uses. When the name is both a script's module and a procedure of another standard module's (or of the
-    /// script's own), the entry point is <see cref="ProgramEntryPointRefusal.Ambiguous"/>, its candidates naming both modules.
+    /// starts at its script, as <c>Backup.(Script)</c> names it. A project of several scripts runs the one it names this way. The other scripts are
+    /// modules its code can call into: their procedures and their blocks' modules are there, and their own statements do not run. When the name is both a
+    /// script's module and a procedure of another standard module's (or of the script's own), the entry point is
+    /// <see cref="ProgramEntryPointRefusal.Ambiguous"/>, its candidates naming the module of each (the script's module twice when the procedure is its own).
     /// </para>
     /// <para>
     /// A library has no entry point (<see cref="ProjectOutputType.Library"/>): it is refused whatever its modules declare.
