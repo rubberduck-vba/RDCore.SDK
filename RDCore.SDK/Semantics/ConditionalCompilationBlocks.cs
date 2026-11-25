@@ -155,7 +155,7 @@ public sealed class ConditionalCompilationBlocks
 
     /// <summary>
     /// The branch each dead location is, as <see cref="BranchesAt"/> numbers the blocks and their branches with every block counted: the branch that holds
-    /// all of the location, the innermost one when branches are nested (<strong>MS-VBAL §3.4</strong>). A location that no branch holds is no branch.
+    /// all of the location, the innermost one when branches are nested (<strong>MS-VBAL §3.4</strong>). A location that no branch holds gives none.
     /// </summary>
     /// <param name="dead">Where the dead branches are, each in the file it is written in, as the environment host says them
     /// (<see cref="Platform.Components.DefineSymbolsResult.DeadBranches"/>) for the parse these blocks were read off.</param>
