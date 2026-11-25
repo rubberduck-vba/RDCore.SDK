@@ -137,10 +137,18 @@ public static class SymbolProperties
     /// </summary>
     public static readonly SymbolProperty<bool> Unregistered = new(nameof(Unregistered));
     /// <summary>
-    /// A small documentation string about this symbol.
+    /// The description of the symbol: a short documentation string, which hover, completion and signature help show
+    /// (<see cref="Completion.CompletionCandidates"/>, <see cref="Completion.SignatureDescription"/>). Unset for a symbol that has none.
     /// </summary>
     /// <remarks>
-    /// Provided via <c>VB_Description</c> attributes.
+    /// <list type="bullet">
+    /// <item>A module of a workspace, its members and its module variables: what the module writes (<see cref="AST.ModuleDescriptions"/>). The
+    /// <c>VB_Description</c> or <c>VB_VarDescription</c> attribute when it writes one, else the <c>'@ModuleDescription</c>, <c>'@Description</c> or
+    /// <c>'@VariableDescription</c> annotation.</item>
+    /// <item>A library, and its classes, modules, enumerations, constants, members and events: the help string of its description
+    /// (<see cref="Runtime.Libraries.LibrarySymbolReader"/>).</item>
+    /// <item>The standard library's members and their parameters: its own texts, in the current UI culture.</item>
+    /// </list>
     /// </remarks>
     public static readonly SymbolProperty<string> DocString = new(nameof(DocString));
     /// <summary>
