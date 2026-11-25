@@ -36,8 +36,8 @@ public abstract record class WorkspaceSymbol(Uri WorkspaceRoot, Uri ParentUri, s
 
     /// <summary>
     /// The document the symbol is written in: the <see cref="SourceLocation.Uri"/> of its declaration's nodes, which is the file's and not the module's
-    /// identity (<see cref="Symbol.Uri"/>). A module written in several files says the file of each of its symbols. <see langword="null"/> for a symbol that
-    /// was not read from a document, such as a referenced library's.
+    /// identity (<see cref="Symbol.Uri"/>). Each symbol of a module written in several files has the file it is written in. <see langword="null"/> for a
+    /// symbol that was not read from a document, such as a referenced library's.
     /// </summary>
     /// <remarks>
     /// <see cref="Definitions"/> are in the same document: they are branches of one <c>#If</c> block, which is written in one file. The locals, parameters

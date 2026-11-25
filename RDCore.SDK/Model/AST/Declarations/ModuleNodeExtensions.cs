@@ -302,7 +302,7 @@ public static class ModuleNodeExtensions
 
     /// <summary>
     /// Where each of <see cref="GetImplementedInterfaceNames"/> is written: the file and the range of its <c>Implements</c> directive,
-    /// one for each name and in the same order. The file is the one the directive is written in, which a module written in several files says.
+    /// one for each name and in the same order. Each location's file is the one its directive is written in.
     /// </summary>
     /// <param name="module">The module whose directives are read.</param>
     public static ImmutableArray<SourceLocation> GetImplementedInterfaceLocations(this ModuleNode module)
