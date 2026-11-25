@@ -17,7 +17,7 @@ namespace RDCore.SDK.Model.AST;
 /// member, <c>'@VariableDescription("...")</c> for a module variable.
 /// <list type="bullet">
 /// <item>The attribute is the description when the module writes one, whatever an annotation says: it is what the VBE stores and shows.</item>
-/// <item>The annotation is the description when the module writes no attribute for it: a block of a file, which writes no attribute, says it so.</item>
+/// <item>The annotation is the description when the module writes no attribute for it, as in a block of a file, which has no attributes.</item>
 /// </list>
 /// An annotation is trivia (<see cref="ModuleParseResult.Trivia"/>), which no node of the tree holds, so these readers take the whole parse. For a file that
 /// has blocks, they take the parse of one module (<see cref="Workspace.RDCoreDocument.ParseOf"/>), which holds that module's trivia alone.
@@ -89,7 +89,7 @@ public static class ModuleDescriptions
     /// <returns>
     /// The member's <c>Attribute &lt;member&gt;.VB_Description</c> (<see cref="ModuleNodeExtensions.GetMemberDescription"/>) or the variable's
     /// <c>Attribute &lt;variable&gt;.VB_VarDescription</c> (<see cref="ModuleNodeExtensions.GetVariableDescription"/>); else the <c>'@Description</c>
-    /// annotation written immediately above a procedure of that name, or the <c>'@VariableDescription</c> one immediately above a variable of that name.
+    /// annotation written immediately above a member of that name, or the <c>'@VariableDescription</c> one immediately above a variable of that name.
     /// The first declaration of that name that has one gives it.
     /// </returns>
     /// <remarks>
