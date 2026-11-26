@@ -125,13 +125,15 @@ public sealed class ConditionalCompilationBlocks
 
     /// <summary>
     /// The branches that hold what is written at <paramref name="location"/>, the outermost first: for each block that holds it, which block it is and which
-    /// of its branches. Neither says where the block is written, only how many blocks come before it and how many branches before the one that holds it.
+    /// of its branches. Neither says where the block is written, only how many blocks come before it and how many of its branches that hold something come
+    /// before the one that holds it.
     /// </summary>
     /// <param name="location">Where it is written: its file, and the start of its range.</param>
     /// <param name="counted">Which blocks are counted, by their file and the range from the start of the first branch to the end of the last: a block that
     /// is not counted holds nothing, and is not counted in the ordinal of those after it.</param>
-    /// <returns>For each block that holds the position, its ordinal among the blocks counted, in the order they are written, and the ordinal of the branch -
-    /// the <c>#If</c>, each <c>#ElseIf</c>, then the <c>#Else</c>; nothing when no counted block holds it.</returns>
+    /// <returns>For each block that holds the position, its ordinal among the blocks counted, in the order they are written, and the ordinal of the branch
+    /// among the block's branches that hold something, in the order they are written (the <c>#If</c>, each <c>#ElseIf</c>, then the <c>#Else</c>): a branch
+    /// that holds nothing is not counted. Nothing when no counted block holds the position.</returns>
     /// <remarks>
     /// Two declarations with the same branches are compiled together, whatever the constants are; a declaration moved into a branch, out of one or to another
     /// is compiled when other constants say so (<strong>MS-VBAL §3.4</strong>).
