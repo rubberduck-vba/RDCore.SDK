@@ -16,6 +16,8 @@ public sealed class ProtocolsTypeForwardsTests
         [typeof(SupportedLanguages)],
         [typeof(WorkspacePaths)],
         [typeof(ImplicitDeclarationScope)],
+        [typeof(AccessModifier)],
+        [typeof(RDCore.SDK.Runtime.Abstract.Execution.ErrorBreakMode)],
     ];
 
     [TestMethod]
