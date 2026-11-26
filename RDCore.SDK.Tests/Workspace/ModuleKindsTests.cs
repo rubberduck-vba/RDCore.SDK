@@ -1,6 +1,7 @@
 using RDCore.SDK.Model;
 using RDCore.SDK.Model.AST.Declarations;
 using RDCore.SDK.Model.Symbols;
+using RDCore.SDK.Server.Configuration;
 using RDCore.SDK.Workspace;
 using System.Text.Json;
 
@@ -148,6 +149,32 @@ public sealed class ModuleKindsTests
         CollectionAssert.AreEqual(new[] { new DeclaredModule("Sheet1", ModuleType.DocumentModule, IsBlock: false) },
             ModuleKinds.ModulesOf(sheet, null).ToArray());
     }
+
+    // a file declares modules in blocks only where it may have statements outside its procedures: a script always may, a VBA module only with the setting.
+    [TestMethod]
+    [DataRow("vba", "Backup.vbs", false, true, DisplayName = "a script, in a VBA workspace, the setting off")]
+    [DataRow("vbscript", "Backup.vbs", false, true, DisplayName = "a script, in a VBScript workspace")]
+    [DataRow("vba", "Backup.bas", false, false, DisplayName = "a VBA module, the setting off")]
+    [DataRow("vba", "Backup.bas", true, true, DisplayName = "a VBA module, the setting on")]
+    public void AFile_DeclaresBlocks_OnlyWhereItMayHaveStatementsOutsideItsProcedures(string language, string file, bool setting, bool declaresBlocks)
+    {
+        var workspace = new SdkWorkspaceOptions { Language = language, FileLevelStatements = setting };
+
+        var modules = ModuleKinds.ModulesOf(new RDCoreModule { RelativeUri = file }, BackupWithBlocks, workspace);
+
+        CollectionAssert.AreEqual(declaresBlocks ? new[] { "Backup", "Account", "Logger" } : new[] { "Backup" },
+            modules.Select(module => module.Name).ToArray());
+    }
+
+    // with no options, the workspace is the default one: VBA, the setting off.
+    [TestMethod]
+    [DataRow("Backup.vbs", true, DisplayName = "a script")]
+    [DataRow("Backup.bas", false, DisplayName = "a VBA module")]
+    public void AFile_DeclaresBlocksWithNoOptions_AsInTheDefaultWorkspace(string file, bool declaresBlocks)
+        => CollectionAssert.AreEqual(declaresBlocks ? new[] { "Backup", "Account", "Logger" } : new[] { "Backup" },
+            ModuleKinds.ModulesOf(new RDCoreModule { RelativeUri = file }, BackupWithBlocks).Select(module => module.Name).ToArray());
+
+    private const string BackupWithBlocks = "Attribute VB_Name = \"Backup\"\r\nClass Account\r\nEnd Class\r\nModule Logger\r\nEnd Module\r\n";
 
     [TestMethod]
     public void TheKindOfABlock_IsAStandardModuleForModule_AndAClassModuleForClass()
