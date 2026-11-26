@@ -173,7 +173,8 @@ public static class ModuleKinds
 public sealed record class DocumentHostClass(string Library, string ClassName);
 
 /// <summary>
-/// A module that a file of a project declares (<see cref="ModuleKinds.ModulesOf"/>): the file's own module, or the module of one of its blocks.
+/// A module that a file of a project declares (<see cref="ModuleKinds.ModulesOf(RDCoreModule, string?, SdkWorkspaceOptions)"/>): the file's own module, or
+/// the module of one of its blocks.
 /// </summary>
 /// <param name="Name">The module's name: its <c>Attribute VB_Name</c> or its file's name for the file's own module, its header's for a block's.</param>
 /// <param name="Kind">The kind of module.</param>
