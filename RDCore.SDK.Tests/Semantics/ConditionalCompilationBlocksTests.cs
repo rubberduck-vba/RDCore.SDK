@@ -30,12 +30,12 @@ public sealed class ConditionalCompilationBlocksTests
 
     private static PrecompilerTriviaNode Body(Uri file, int first, int last) => new(Id(), At(first, last, file), [], string.Empty);
 
-    // a block: its #If line, then the branch bodies after it; an #ElseIf or an #Else of no body has none.
+    // a block: its #If line, then the branch bodies after it; an #If, an #ElseIf or an #Else of no body has none.
     private static PrecompilerIfBlockStatementNode Block(
-        int line, PrecompilerTriviaNode body, PrecompilerTriviaNode?[] elseIfs, PrecompilerTriviaNode? @else = null, bool hasElse = false, Uri? file = null)
+        int line, PrecompilerTriviaNode? body, PrecompilerTriviaNode?[] elseIfs, PrecompilerTriviaNode? @else = null, bool hasElse = false, Uri? file = null)
         => new(Id(), At(line, line, file), [
             new PrecompilerInlineIfStatementNode(Id(), At(line, line, file), []),
-            body,
+            .. body is null ? Array.Empty<SyntaxNode>() : [body],
             .. elseIfs.Select(elseIf => new PrecompilerElseIfBlockStatementNode(Id(), At(line, line, file), elseIf is null ? [] : [elseIf])),
             .. hasElse || @else is not null
                 ? [new PrecompilerElseBlockStatementNode(Id(), At(line, line, file), @else is null ? [] : [@else])]
@@ -232,5 +232,9 @@ public sealed class ConditionalCompilationBlocksTests
         Assert.IsFalse(blocks.HasShapeOf(Of(Block(1, Body(2, 2), [], Body(4, 4)), Block(6, Body(7, 7), [], hasElse: true))), "an empty #Else added");
         Assert.IsFalse(blocks.HasShapeOf(Of(Block(1, Body(2, 8, Block(6, Body(7, 7), [])), [], Body(10, 10)))),
             "the second block moved into the first one's #If branch");
+
+        var inTheIf = Of(Block(1, Body(2, 2), [], hasElse: true));
+        Assert.IsTrue(inTheIf.HasShapeOf(Of(Block(1, Body(3, 3), [], hasElse: true))), "the body moved down in the #If");
+        Assert.IsFalse(inTheIf.HasShapeOf(Of(Block(1, null, [], Body(3, 3)))), "the body moved from the #If to the #Else");
     }
 }

@@ -23,13 +23,17 @@ public sealed class ConditionalCompilationBlocks
     private readonly ImmutableArray<ImmutableArray<SourceLocation>> _blocks;
     private readonly ImmutableArray<(int Branches, bool HasElse)> _shapes;
 
-    private ConditionalCompilationBlocks(ImmutableArray<ImmutableArray<SourceLocation>> blocks, ImmutableArray<(int Branches, bool HasElse)> shapes)
-        => (_blocks, _shapes) = (blocks, shapes);
+    // of each block, which of its branches each body is: the #If is 0, each #ElseIf the next, then the #Else. A branch that holds nothing has no body.
+    private readonly ImmutableArray<ImmutableArray<int>> _bodied;
+
+    private ConditionalCompilationBlocks(
+        ImmutableArray<ImmutableArray<SourceLocation>> blocks, ImmutableArray<(int Branches, bool HasElse)> shapes, ImmutableArray<ImmutableArray<int>> bodied)
+        => (_blocks, _shapes, _bodied) = (blocks, shapes, bodied);
 
     /// <summary>
     /// A module with no <c>#If</c> block: nothing is an alternative of anything.
     /// </summary>
-    public static ConditionalCompilationBlocks None { get; } = new([], []);
+    public static ConditionalCompilationBlocks None { get; } = new([], [], []);
 
     /// <summary>
     /// The blocks of a module, read off its precompiler trivia, nested ones included, each where its nodes' <see cref="SyntaxNode.SourceLocation"/> say.
@@ -45,12 +49,13 @@ public sealed class ConditionalCompilationBlocks
 
         var blocks = ImmutableArray.CreateBuilder<ImmutableArray<SourceLocation>>();
         var shapes = ImmutableArray.CreateBuilder<(int Branches, bool HasElse)>();
+        var bodied = ImmutableArray.CreateBuilder<ImmutableArray<int>>();
         foreach (var node in precompilerTrivia)
         {
-            Collect(node, blocks, shapes);
+            Collect(node, blocks, shapes, bodied);
         }
 
-        return new(blocks.ToImmutable(), shapes.ToImmutable());
+        return new(blocks.ToImmutable(), shapes.ToImmutable(), bodied.ToImmutable());
     }
 
     /// <summary>
@@ -231,7 +236,7 @@ public sealed class ConditionalCompilationBlocks
         for (var index = 0; index < _blocks.Length; index++)
         {
             var (mine, theirs) = (_blocks[index], other._blocks[index]);
-            if (_shapes[index] != other._shapes[index] || mine.Length != theirs.Length)
+            if (_shapes[index] != other._shapes[index] || !_bodied[index].SequenceEqual(other._bodied[index]))
             {
                 return false;
             }
@@ -299,24 +304,26 @@ public sealed class ConditionalCompilationBlocks
     }
 
     private static void Collect(
-        SyntaxNode node, ImmutableArray<ImmutableArray<SourceLocation>>.Builder blocks, ImmutableArray<(int Branches, bool HasElse)>.Builder shapes)
+        SyntaxNode node, ImmutableArray<ImmutableArray<SourceLocation>>.Builder blocks, ImmutableArray<(int Branches, bool HasElse)>.Builder shapes,
+        ImmutableArray<ImmutableArray<int>>.Builder bodied)
     {
         switch (node)
         {
             case PrecompilerIfBlockStatementNode ifBlock:
                 var bodies = BranchBodies(ifBlock);
-                blocks.Add([.. bodies.Select(body => body.SourceLocation)]);
+                blocks.Add([.. bodies.Select(each => each.Body.SourceLocation)]);
+                bodied.Add([.. bodies.Select(each => each.Branch)]);
 
                 // the #If, each #ElseIf and the #Else, whether they hold anything or not.
                 var hasElse = ifBlock.Children.OfType<PrecompilerElseBlockStatementNode>().Any();
                 shapes.Add((1 + ifBlock.Children.OfType<PrecompilerElseIfBlockStatementNode>().Count() + (hasElse ? 1 : 0), hasElse));
 
                 // a branch may itself contain a block.
-                foreach (var body in bodies)
+                foreach (var (_, body) in bodies)
                 {
                     foreach (var child in body.Children)
                     {
-                        Collect(child, blocks, shapes);
+                        Collect(child, blocks, shapes, bodied);
                     }
                 }
 
@@ -324,28 +331,34 @@ public sealed class ConditionalCompilationBlocks
             case PrecompilerTriviaNode trivia:
                 foreach (var child in trivia.Children)
                 {
-                    Collect(child, blocks, shapes);
+                    Collect(child, blocks, shapes, bodied);
                 }
 
                 break;
         }
     }
 
-    // one body per #If/#ElseIf/#Else branch, in source order.
-    private static List<PrecompilerTriviaNode> BranchBodies(PrecompilerIfBlockStatementNode ifBlock)
+    // one body per #If/#ElseIf/#Else branch that holds something, in source order, with which branch of the block it is.
+    private static List<(int Branch, PrecompilerTriviaNode Body)> BranchBodies(PrecompilerIfBlockStatementNode ifBlock)
     {
-        var bodies = new List<PrecompilerTriviaNode>();
+        var bodies = new List<(int Branch, PrecompilerTriviaNode Body)>();
         if (ifBlock.Children is [PrecompilerInlineIfStatementNode, PrecompilerTriviaNode body, ..])
         {
-            bodies.Add(body);
+            bodies.Add((0, body));
         }
 
-        bodies.AddRange(ifBlock.Children.OfType<PrecompilerElseIfBlockStatementNode>()
-            .Select(elseIf => elseIf.Children.OfType<PrecompilerTriviaNode>().FirstOrDefault()).OfType<PrecompilerTriviaNode>());
+        var elseIfs = ifBlock.Children.OfType<PrecompilerElseIfBlockStatementNode>().ToList();
+        for (var index = 0; index < elseIfs.Count; index++)
+        {
+            if (elseIfs[index].Children.OfType<PrecompilerTriviaNode>().FirstOrDefault() is { } elseIfBody)
+            {
+                bodies.Add((1 + index, elseIfBody));
+            }
+        }
 
         if (ifBlock.Children.OfType<PrecompilerElseBlockStatementNode>().FirstOrDefault()?.Children.OfType<PrecompilerTriviaNode>().FirstOrDefault() is { } elseBody)
         {
-            bodies.Add(elseBody);
+            bodies.Add((1 + elseIfs.Count, elseBody));
         }
 
         return bodies;
