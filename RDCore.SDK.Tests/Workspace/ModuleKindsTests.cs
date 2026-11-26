@@ -174,6 +174,16 @@ public sealed class ModuleKindsTests
         => CollectionAssert.AreEqual(declaresBlocks ? new[] { "Backup", "Account", "Logger" } : new[] { "Backup" },
             ModuleKinds.ModulesOf(new RDCoreModule { RelativeUri = file }, BackupWithBlocks).Select(module => module.Name).ToArray());
 
+    // a file's blocks by its path, as a parser has it: the address of a block's own module has none.
+    [TestMethod]
+    [DataRow("/c:/ws/Backup.vbs", false, true, DisplayName = "a script, the setting off")]
+    [DataRow("/c:/ws/Backup.bas", false, false, DisplayName = "a VBA module, the setting off")]
+    [DataRow("/c:/ws/Backup.bas", true, true, DisplayName = "a VBA module, the setting on")]
+    [DataRow("/c:/ws/Backup.vbs/Logger", true, false, DisplayName = "the module of a block, the setting on")]
+    public void AFilesBlocks_AreFound_OnlyWhereItMayHaveStatementsOutsideItsProcedures(string document, bool setting, bool hasBlocks)
+        => CollectionAssert.AreEqual(hasBlocks ? new[] { "Account", "Logger" } : Array.Empty<string>(),
+            ModuleKinds.BlocksOf(document, BackupWithBlocks, new SdkWorkspaceOptions { FileLevelStatements = setting }).Select(block => block.Name).ToArray());
+
     private const string BackupWithBlocks = "Attribute VB_Name = \"Backup\"\r\nClass Account\r\nEnd Class\r\nModule Logger\r\nEnd Module\r\n";
 
     [TestMethod]

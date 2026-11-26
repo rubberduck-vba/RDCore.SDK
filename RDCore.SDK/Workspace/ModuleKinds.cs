@@ -127,18 +127,36 @@ public static class ModuleKinds
         ArgumentNullException.ThrowIfNull(module);
         ArgumentNullException.ThrowIfNull(workspace);
         DeclaredModule own = new(ModuleName.Resolve(source, module.RelativeUri), Of(module, source), IsBlock: false);
-        return workspace.AllowsFileLevelStatements(module.RelativeUri)
-            ?
-            [
-                own,
-                .. FileBlocks.Find(source).Select(block => new DeclaredModule(block.Name, Of(block.Kind), IsBlock: true)
-                {
-                    IsPartial = block.IsPartial,
-                    IsCreatable = block.IsCreatable,
-                    Visibility = block.Visibility,
-                }),
-            ]
-            : [own];
+        return
+        [
+            own,
+            .. BlocksOf(module.RelativeUri, source, workspace).Select(block => new DeclaredModule(block.Name, Of(block.Kind), IsBlock: true)
+            {
+                IsPartial = block.IsPartial,
+                IsCreatable = block.IsCreatable,
+                Visibility = block.Visibility,
+            }),
+        ];
+    }
+
+    /// <summary>
+    /// The blocks of a file in a workspace (<see cref="FileBlocks.Find"/>), in the order they are written: none where the file may have no statements
+    /// outside its procedures (<see cref="SdkWorkspaceOptions.AllowsFileLevelStatements"/>), whose block headers and end lines are then lines of the
+    /// file's own module, and syntax errors there.
+    /// </summary>
+    /// <param name="document">The file's URI, its path, or its relative URI in its project.</param>
+    /// <param name="source">The file's text, or <see langword="null"/> when it could not be read.</param>
+    /// <param name="workspace">The workspace's options, which say whether the file may have statements outside its procedures.</param>
+    /// <returns>The blocks; none when <paramref name="source"/> is <see langword="null"/>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="document"/> or <paramref name="workspace"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// The workspace's <see cref="SdkWorkspaceOptions.Language"/> is not the identifier of a language the platform serves.
+    /// </exception>
+    public static IReadOnlyList<FileBlock> BlocksOf(string document, string? source, SdkWorkspaceOptions workspace)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        ArgumentNullException.ThrowIfNull(workspace);
+        return workspace.AllowsFileLevelStatements(document) ? FileBlocks.Find(source) : [];
     }
 
     /// <summary>
