@@ -192,6 +192,48 @@ public sealed class RecordBlockTests
         Assert.AreEqual("a", nested.FieldAt(1)!.RuntimeValue.BoxedValue);
     }
 
+    // a record let a record that is no copy (the variable assigned, not the copy an assignment makes of it) takes a copy of it: a String is written in the
+    // record's own cell, and a Variant is a copy of the source's, so a write to either afterwards is not the other's.
+    [TestMethod]
+    public void ARecordLetARecordThatIsNoCopy_SharesNoCellWithIt()
+    {
+        var type = Udt("T", ("N", VBLongType.TypeInfo), ("S", VBStringType.TypeInfo), ("V", VBVariantType.TypeInfo));
+        var record = new VBUserDefinedTypeValue(type);
+        var source = new VBUserDefinedTypeValue(type);
+        _ = source.TryLetFieldAt(0, new VBLongValue(4));
+        _ = source.TryLetFieldAt(1, Text("s"));
+        _ = source.TryLetFieldAt(2, new VBVariantValue(new VBLongValue(7)));
+        var cell = record.GetFieldHandle("S")!;
+
+        Assert.IsTrue(record.TryLetFrom(source));
+
+        Assert.AreSame(cell, record.GetFieldHandle("S"), "the String is written in the record's own cell");
+        Assert.AreEqual("s", cell.Value.BoxedValue);
+        Assert.AreEqual(new VBLongValue(4).RuntimeValue, record.FieldAt(0)!.RuntimeValue);
+        Assert.AreNotSame(source.StoredFieldAt(2), record.StoredFieldAt(2), "the Variant is a copy of the source's");
+        Assert.AreEqual(new VBLongValue(7).RuntimeValue, ((VBVariantValue)record.StoredFieldAt(2)!).TypedValue.RuntimeValue);
+
+        ((IKnowledgeBinding)cell).Store(Text("t").RuntimeValue, isKnown: true);
+        Assert.AreEqual("s", source.FieldAt(1)!.RuntimeValue.BoxedValue);
+    }
+
+    // a record let itself holds what it held.
+    [TestMethod]
+    public void ARecordLetItself_HoldsWhatItHeld()
+    {
+        var type = Udt("T", ("N", VBLongType.TypeInfo), ("S", VBStringType.TypeInfo), ("V", VBVariantType.TypeInfo));
+        var record = new VBUserDefinedTypeValue(type);
+        _ = record.TryLetFieldAt(0, new VBLongValue(4));
+        _ = record.TryLetFieldAt(1, Text("s"));
+        _ = record.TryLetFieldAt(2, new VBVariantValue(Text("v")));
+
+        Assert.IsTrue(record.TryLetFrom(record));
+
+        Assert.AreEqual(new VBLongValue(4).RuntimeValue, record.FieldAt(0)!.RuntimeValue);
+        Assert.AreEqual("s", record.FieldAt(1)!.RuntimeValue.BoxedValue);
+        Assert.AreEqual("v", ((VBVariantValue)record.StoredFieldAt(2)!).TypedValue.RuntimeValue.BoxedValue);
+    }
+
     // a record let another in place: a cell taken from it before (a ByRef parameter given a field) reads what was let, and the record reads what the
     // source held, whether or not each field was known.
     [TestMethod]

@@ -135,7 +135,7 @@ public record class VBUserDefinedTypeValue : VBTypedValue,
     public VBUserDefinedTypeValue DataCopy()
     {
         var copy = new VBUserDefinedTypeValue(InvalidBindingHandle.Default, new RecordBlock(_shape));
-        copy.CopyFrom(this, CopyOf);
+        copy.CopyFrom(this);
         return copy;
     }
 
@@ -310,8 +310,8 @@ public record class VBUserDefinedTypeValue : VBTypedValue,
     /// holds, or a fixed-size array that is not known or has other bounds.
     /// </para>
     /// <para>
-    /// <paramref name="value"/> is of the field's declared type, which the assignment let-coerced it to, and shares no cell with anything else: a record or
-    /// an array in it becomes the field's own.
+    /// <paramref name="value"/> is of the field's declared type, which the assignment let-coerced it to, and shares no cell with anything else: an array in it
+    /// becomes the field's own. A record let to a nested record is copied into it (<see cref="TryLetFrom"/>), and can be any record of the field's type.
     /// </para>
     /// </remarks>
     /// <param name="index">The field's position in declaration order.</param>
@@ -375,9 +375,17 @@ public record class VBUserDefinedTypeValue : VBTypedValue,
     /// (<see cref="TryLetFieldAt"/>): a <c>ByRef</c> parameter given a field of this record (MS-VBAL §5.3.1.11) reads the value assigned.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// The bytes of <paramref name="source"/> are copied over this record's at once, and each of its reference fields is let as <see cref="TryLetFieldAt"/>
-    /// lets it. <paramref name="source"/> is the copy the assignment made (<see cref="DataCopy"/>), which shares no cell with anything else: a value of it
-    /// that replaces a field (an object, a <c>Variant</c> or a resizable array) becomes this record's own.
+    /// lets it, a copy of the source's field: the record let is a copy of <paramref name="source"/> (<strong>MS-VBAL §5.5.1.2.8</strong>), written where
+    /// this record is. <paramref name="source"/> can be any record of this record's type, the record itself included, and shares no cell with this record
+    /// afterwards.
+    /// </para>
+    /// <para>
+    /// A <c>String</c> or an object a field held in its cell is written there, the source's value itself, which no write changes: a <c>String</c> or an
+    /// object reference is replaced, never written in place. A field that is replaced (a <c>Variant</c>, an array, or a value of another kind than the
+    /// field holds) is given a copy (<see cref="DataCopy"/>), as is the source of a fixed-size array field let element by element.
+    /// </para>
     /// </remarks>
     /// <param name="source">The record assigned, of this record's type.</param>
     /// <returns><see langword="false"/> when <paramref name="source"/> is of another type, and nothing is written.</returns>
@@ -390,29 +398,36 @@ public record class VBUserDefinedTypeValue : VBTypedValue,
 
         if (ReferenceEquals(_shape, source._shape))
         {
-            CopyFrom(source, static value => value);
+            CopyFrom(source);
             return true;
         }
 
         // two types equal by their declarations, each with a shape of its own: the record is let field by field.
         for (var index = 0; index < FieldCount; index++)
         {
-            _ = TryLetFieldAt(index, source.Stored(index));
+            var field = _shape.Fields[index];
+            if (field.Kind == RecordFieldKind.Reference)
+            {
+                LetSlotFrom(_slot + field.Slot, source.Stored(index));
+            }
+            else
+            {
+                _ = TryLetFieldAt(index, source.Stored(index));
+            }
         }
 
         return true;
     }
 
-    // the bytes of source over this record's, and whether each is known; then each reference field of source, as copy makes it, let into this record's.
-    private void CopyFrom(VBUserDefinedTypeValue source, Func<VBTypedValue, VBTypedValue> copy)
+    // the bytes of source over this record's, and whether each is known; then each reference field of source let into this record's.
+    private void CopyFrom(VBUserDefinedTypeValue source)
     {
         source._block.Bytes.AsSpan(source._offset, _shape.ByteSize).CopyTo(_block.Bytes.AsSpan(_offset, _shape.ByteSize));
         _block.Written();
-        CopyKnowledgeAndSlots(_shape, source, copy, _slot, _place, source._slot, source._place);
+        CopyKnowledgeAndSlots(_shape, source, _slot, _place, source._slot, source._place);
     }
 
-    private void CopyKnowledgeAndSlots(
-        RecordShape shape, VBUserDefinedTypeValue source, Func<VBTypedValue, VBTypedValue> copy, int slot, int place, int sourceSlot, int sourcePlace)
+    private void CopyKnowledgeAndSlots(RecordShape shape, VBUserDefinedTypeValue source, int slot, int place, int sourceSlot, int sourcePlace)
     {
         foreach (var field in shape.Fields)
         {
@@ -422,22 +437,31 @@ public record class VBUserDefinedTypeValue : VBTypedValue,
                     _block.Know(place + field.Place, source._block.IsKnown(sourcePlace + field.Place));
                     break;
                 case RecordFieldKind.Nested:
-                    CopyKnowledgeAndSlots(field.Nested!, source, copy, slot + field.Slot, place + field.NestedPlace, sourceSlot + field.Slot,
+                    CopyKnowledgeAndSlots(field.Nested!, source, slot + field.Slot, place + field.NestedPlace, sourceSlot + field.Slot,
                         sourcePlace + field.NestedPlace);
                     break;
                 default:
-                    var value = copy(source._block.Slots[sourceSlot + field.Slot]);
-                    if (_block.Slots[slot + field.Slot] is null)
-                    {
-                        _block.Slots[slot + field.Slot] = value;
-                    }
-                    else
-                    {
-                        LetSlot(slot + field.Slot, value);
-                    }
-
+                    LetSlotFrom(slot + field.Slot, source._block.Slots[sourceSlot + field.Slot]);
                     break;
             }
+        }
+    }
+
+    // a reference field let the value of another record's field: written in its cell when it is written there, or given a copy of it, which shares no cell
+    // with the other record. A slot of a block just made holds nothing yet, and is given the copy.
+    private void LetSlotFrom(int slot, VBTypedValue source)
+    {
+        if (_block.Slots[slot] is { Handle: IKnowledgeBinding cell } held && IsWrittenInItsCell(held, source))
+        {
+            cell.Store(source.RuntimeValue, isKnown: !source.IsIndeterminate);
+        }
+        else if (_block.Slots[slot] is null)
+        {
+            _block.Slots[slot] = CopyOf(source);
+        }
+        else
+        {
+            LetSlot(slot, CopyOf(source));
         }
     }
 
