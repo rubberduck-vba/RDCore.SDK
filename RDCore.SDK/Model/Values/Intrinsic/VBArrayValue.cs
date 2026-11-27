@@ -53,10 +53,11 @@ public abstract record class VBArrayValue : VBTypedValue
     /// <param name="dimensions">The lower and upper bound of each dimension, outermost first.</param>
     /// <param name="itemType">The element type. Use <see cref="VBVariantType"/> when unspecified.</param>
     /// <param name="elementDefault">What each element starts as, when it is more than the element type's own default value can say
-    /// (<see cref="IVariableDefaults.ElementDefaultOf"/>); <see langword="null"/> for that default.</param>
+    /// (<see cref="IVariableDefaults.ElementDefaultOf"/>); <see langword="null"/> for that default. For an array of records it is called once, when the
+    /// first element is made, and each element starts as the record it gives.</param>
     /// <param name="elementCell">Makes the cell each element is stored in, holding the element type's default value, when the runtime stores elements of
     /// <paramref name="itemType"/> in cells of its own (<see cref="IVariableDefaults.ElementCellOf"/>); <see langword="null"/> for a cell that holds the
-    /// default value as it is. Not used for an element that is a record, which <paramref name="elementDefault"/> makes, nor for an element held as bytes
+    /// default value as it is. Not used for an element that is a record, which starts as <paramref name="elementDefault"/> says, nor for an element held as bytes
     /// (<see cref="ElementEncoding"/>).</param>
     protected VBArrayValue((int lBound, int uBound)[] dimensions, VBType itemType, Func<VBTypedValue>? elementDefault = null, Func<IBindingHandle>? elementCell = null)
         : base(VBArrayType.TypeInfo)

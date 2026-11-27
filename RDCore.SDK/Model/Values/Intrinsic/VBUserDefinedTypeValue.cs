@@ -81,7 +81,8 @@ public record class VBUserDefinedTypeValue : VBTypedValue,
     /// </summary>
     /// <param name="handle">The binding of the record.</param>
     /// <param name="block">The block of the record.</param>
-    /// <exception cref="ArgumentException"><paramref name="block"/> holds the elements of an array, which have no record shape.</exception>
+    /// <exception cref="ArgumentException"><paramref name="block"/> holds the elements of an array, whose <see cref="ValueBlock.Shape"/> is
+    /// <see langword="null"/>.</exception>
     public VBUserDefinedTypeValue(IBindingHandle handle, ValueBlock block)
         : this(handle, block, block.Shape ?? throw new ArgumentException("the block holds the elements of an array.", nameof(block)),
             offset: 0, slot: 0, place: 0) { }
