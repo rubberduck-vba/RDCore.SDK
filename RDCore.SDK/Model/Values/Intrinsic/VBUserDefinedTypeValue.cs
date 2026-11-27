@@ -545,28 +545,33 @@ public record class VBUserDefinedTypeValue : VBTypedValue,
         return -1;
     }
 
-    // each field as a variable declared as it starts (MS-VBAL gives a UDT no initializer): a bytes field written its default value, a nested record's
-    // fields the same, and a reference field a fresh value of its own.
+    // each field as a variable declared as it starts (MS-VBAL gives a UDT no initializer): a bytes field as its zero bytes (the default value of each of
+    // its types is 0, False, or the date whose serial is 0), a nested record's fields the same, and a reference field a fresh value of its own.
     private void Start(IVariableDefaults? defaults)
     {
         for (var index = 0; index < _shape.Fields.Length; index++)
         {
             var field = _shape.Fields[index];
-            if (field.Kind == RecordFieldKind.Nested)
+            switch (field.Kind)
             {
-                ((VBUserDefinedTypeValue)Stored(index)).Start(defaults);
-                continue;
+                case RecordFieldKind.Nested:
+                    StartNested(index, field, defaults);
+                    break;
+                case RecordFieldKind.Reference:
+                    var value = defaults is null ? field.Symbol.ResolvedType?.DefaultValue ?? VBEmptyValue.Empty : defaults.DefaultValueOf(field.Symbol);
+                    _block.Slots[_slot + field.Slot] = Fresh(value);
+                    break;
             }
+        }
+    }
 
-            var value = defaults is null ? field.Symbol.ResolvedType?.DefaultValue ?? VBEmptyValue.Empty : defaults.DefaultValueOf(field.Symbol);
-            if (field.Kind == RecordFieldKind.Bytes)
-            {
-                RecordBytesCell.Encode(value.RuntimeValue, _block.Bytes.AsSpan(_offset + field.Offset), field.Encoding);
-            }
-            else
-            {
-                _block.Slots[_slot + field.Slot] = Fresh(value);
-            }
+    // a nested record's fields as they start, without the view of it, which is made when the record is read: a nested record of bytes alone starts as its
+    // zero bytes.
+    private void StartNested(int index, RecordShapeField field, IVariableDefaults? defaults)
+    {
+        if (field.Nested!.SlotCount > 0)
+        {
+            ((VBUserDefinedTypeValue)Stored(index)).Start(defaults);
         }
     }
 

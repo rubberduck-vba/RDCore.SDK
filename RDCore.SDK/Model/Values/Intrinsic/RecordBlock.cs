@@ -18,7 +18,7 @@ namespace RDCore.SDK.Model.Values.Intrinsic;
 /// </remarks>
 public sealed class RecordBlock
 {
-    private readonly object?[] _made;
+    private object?[]? _made;
     private bool[]? _forgotten;
 
     /// <summary>
@@ -30,7 +30,6 @@ public sealed class RecordBlock
         Shape = shape;
         Bytes = shape.ByteSize == 0 ? [] : new byte[shape.ByteSize];
         Slots = shape.SlotCount == 0 ? [] : new VBTypedValue[shape.SlotCount];
-        _made = shape.PlaceCount == 0 ? [] : new object?[shape.PlaceCount];
     }
 
     /// <summary>
@@ -72,7 +71,7 @@ public sealed class RecordBlock
     {
         if (!isKnown)
         {
-            (_forgotten ??= new bool[_made.Length])[place] = true;
+            (_forgotten ??= new bool[Shape.PlaceCount])[place] = true;
         }
         else if (_forgotten is not null)
         {
@@ -80,9 +79,10 @@ public sealed class RecordBlock
         }
     }
 
-    internal object? MadeAt(int place) => _made[place];
+    // what is made of the fields, on first need: a block whose fields are not read one by one makes none of it.
+    internal object? MadeAt(int place) => _made?[place];
 
-    internal void Keep(int place, object made) => _made[place] = made;
+    internal void Keep(int place, object made) => (_made ??= new object?[Shape.PlaceCount])[place] = made;
 }
 
 /// <summary>
