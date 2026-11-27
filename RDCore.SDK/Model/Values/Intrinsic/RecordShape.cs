@@ -26,6 +26,10 @@ public sealed class RecordShape
 {
     private static readonly ConditionalWeakTable<VBUserDefinedType, RecordShape> Shapes = new();
 
+    // the bytes field at each place, the fields of the records it nests included, as its offset in the record's bytes and its encoding: None at a place that
+    // is not a bytes field.
+    private readonly (int Offset, RecordFieldEncoding Encoding)[] _bytesAt;
+
     private RecordShape(VBUserDefinedType type, ImmutableArray<RecordShapeField> fields, int byteSize, int slotCount, int placeCount)
     {
         Type = type;
@@ -33,6 +37,24 @@ public sealed class RecordShape
         ByteSize = byteSize;
         SlotCount = slotCount;
         PlaceCount = placeCount;
+        _bytesAt = new (int, RecordFieldEncoding)[placeCount];
+        foreach (var field in fields)
+        {
+            if (field.Kind == RecordFieldKind.Bytes)
+            {
+                _bytesAt[field.Place] = (field.Offset, field.Encoding);
+            }
+            else if (field.Nested is { } nested)
+            {
+                for (var place = 0; place < nested.PlaceCount; place++)
+                {
+                    if (nested._bytesAt[place] is { Encoding: not RecordFieldEncoding.None } inner)
+                    {
+                        _bytesAt[field.NestedPlace + place] = (field.Offset + inner.Offset, inner.Encoding);
+                    }
+                }
+            }
+        }
     }
 
     /// <summary>
@@ -66,6 +88,55 @@ public sealed class RecordShape
     /// How many places a record of the type has for what is made of its fields on first need: one per field, and the places of the records it nests.
     /// </summary>
     public int PlaceCount { get; }
+
+    /// <summary>
+    /// The place of the field that <paramref name="path"/> names, relative to the record's first place: a field of the record itself by its position in
+    /// declaration order, a field of a record it nests by the nested record's position, then the field's position in that record, and so on.
+    /// </summary>
+    /// <remarks>
+    /// A field of the record itself is at the place of its position. A place does not depend on the pointer width, so a place found when code is compiled
+    /// holds when it runs; the offset of a field's bytes does (a <c>LongPtr</c> field before it).
+    /// </remarks>
+    /// <param name="path">The position of the field at each level, the outermost first.</param>
+    /// <returns>
+    /// The field's place, which <see cref="VBUserDefinedTypeValue.TryReadBytesField"/> and <see cref="VBUserDefinedTypeValue.TryWriteBytesField"/> take;
+    /// -1 when the path is empty, a position is out of range, or a field before the last is not a nested record.
+    /// </returns>
+    public int PlaceOf(ReadOnlySpan<int> path)
+    {
+        var (shape, first) = (this, 0);
+        for (var level = 0; level < path.Length; level++)
+        {
+            if (path[level] < 0 || path[level] >= shape.Fields.Length)
+            {
+                return -1;
+            }
+
+            var field = shape.Fields[path[level]];
+            if (level == path.Length - 1)
+            {
+                return first + field.Place;
+            }
+
+            if (field.Nested is not { } nested)
+            {
+                return -1;
+            }
+
+            (shape, first) = (nested, first + field.NestedPlace);
+        }
+
+        return -1;
+    }
+
+    // the offset of the bytes field at place, when it is one encoded as encoding.
+    internal bool IsBytesAt(int place, RecordFieldEncoding encoding, out int offset)
+    {
+        offset = place >= 0 && place < _bytesAt.Length && encoding != RecordFieldEncoding.None && _bytesAt[place].Encoding == encoding
+            ? _bytesAt[place].Offset
+            : -1;
+        return offset >= 0;
+    }
 
     private static RecordShape Make(VBUserDefinedType type, HashSet<VBUserDefinedType> nesting)
     {

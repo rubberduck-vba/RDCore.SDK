@@ -118,6 +118,62 @@ public sealed class RecordBlockTests
         Assert.IsTrue(record.Block.Bytes.All(each => each == 0));
     }
 
+    private static VBUserDefinedType Nesting()
+    {
+        var inner = Udt("TInner", ("X", VBLongType.TypeInfo), ("S", VBStringType.TypeInfo), ("D", VBDoubleType.TypeInfo));
+        var middle = Udt("TMiddle", ("N", VBIntegerType.TypeInfo), ("In", inner));
+        return Udt("TOuter", ("A", VBLongType.TypeInfo), ("Mid", middle), ("B", VBDoubleType.TypeInfo));
+    }
+
+    // the place of a field of a record two levels in is that field, read and written from the outermost record or from a view of a record it nests, each
+    // view reading from its own first place: the field's cell reads what was written, and no other field is written.
+    [TestMethod]
+    public void ThePlaceOfAFieldOfANestedRecord_IsThatField_FromTheRecordOrAViewOfARecordItNests()
+    {
+        var outer = new VBUserDefinedTypeValue(Nesting());
+        var middle = (VBUserDefinedTypeValue)outer.StoredFieldAt(1)!;
+        var inner = (VBUserDefinedTypeValue)middle.StoredFieldAt(1)!;
+        var cell = (IKnowledgeBinding)inner.GetFieldHandle("D")!;
+        Assert.AreEqual(new VBDoubleValue(0).RuntimeValue, cell.Value, "the premise: the cell was read before the write");
+        var place = outer.Shape.PlaceOf([1, 1, 2]);
+        Assert.IsTrue(place >= outer.Shape.Fields.Length, "the premise: a nested field's place is past the record's own fields");
+
+        Assert.IsTrue(outer.TryWriteBytesField(place, RecordFieldEncoding.Double, 0, 7.5));
+        Assert.IsTrue(middle.TryWriteBytesField(middle.Shape.PlaceOf([1, 0]), RecordFieldEncoding.Int32, 42, 0));
+
+        Assert.AreEqual(new VBDoubleValue(7.5).RuntimeValue, cell.Value, "the cell reads what was written");
+        Assert.AreEqual(new VBLongValue(42).RuntimeValue, inner.FieldAt(0)!.RuntimeValue);
+        Assert.IsTrue(outer.TryReadBytesField(outer.Shape.PlaceOf([1, 1, 0]), RecordFieldEncoding.Int32, out var integral, out _));
+        Assert.AreEqual(42L, integral);
+        Assert.IsTrue(middle.TryReadBytesField(middle.Shape.PlaceOf([1, 2]), RecordFieldEncoding.Double, out _, out var floating));
+        Assert.AreEqual(7.5, floating);
+        Assert.AreEqual(new VBLongValue(0).RuntimeValue, outer.FieldAt(0)!.RuntimeValue);
+        Assert.AreEqual(new VBIntegerValue(0).RuntimeValue, middle.FieldAt(0)!.RuntimeValue);
+        Assert.AreEqual(new VBDoubleValue(0).RuntimeValue, outer.FieldAt(2)!.RuntimeValue);
+    }
+
+    // a field of the record itself is at the place of its position; a path that names no field has no place, and a place that is not a bytes field of the
+    // encoding expected is neither read nor written.
+    [TestMethod]
+    public void APathThatNamesNoField_HasNoPlace_AndAPlaceThatIsNoBytesField_IsNotReadOrWritten()
+    {
+        var outer = new VBUserDefinedTypeValue(Nesting());
+        var shape = outer.Shape;
+
+        Assert.AreEqual(2, shape.PlaceOf([2]));
+        Assert.AreEqual(-1, shape.PlaceOf([]));
+        Assert.AreEqual(-1, shape.PlaceOf([3]));
+        Assert.AreEqual(-1, shape.PlaceOf([-1]));
+        Assert.AreEqual(-1, shape.PlaceOf([0, 0]), "a Long field holds no field");
+        Assert.AreEqual(-1, shape.PlaceOf([1, 1, 3]));
+
+        Assert.IsFalse(outer.TryReadBytesField(shape.PlaceOf([1, 1, 1]), RecordFieldEncoding.Int32, out _, out _), "a String field");
+        Assert.IsFalse(outer.TryWriteBytesField(shape.PlaceOf([1]), RecordFieldEncoding.Int16, 5, 0), "a nested record");
+        Assert.IsFalse(outer.TryWriteBytesField(shape.PlaceOf([1, 0]), RecordFieldEncoding.Int32, 5, 0), "an Integer field");
+        Assert.IsFalse(outer.TryWriteBytesField(shape.PlaceCount, RecordFieldEncoding.Int32, 5, 0));
+        Assert.IsTrue(outer.Block.Bytes.All(each => each == 0));
+    }
+
     // the bytes fields of a record each have bytes of their own: a value let to each is read back from each, none written over by another.
     [TestMethod]
     public void EachBytesField_HasBytesOfItsOwn()

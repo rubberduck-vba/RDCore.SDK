@@ -227,68 +227,66 @@ public record class VBUserDefinedTypeValue : VBTypedValue,
     public ReadOnlySpan<VBTypedValue> ReferenceFields => _block.Slots.AsSpan(_slot, _shape.SlotCount);
 
     /// <summary>
-    /// Reads the field at <paramref name="index"/>, held as bytes encoded as <paramref name="encoding"/>, as its payload: an integer, a <c>Boolean</c> as its
+    /// Reads the field at <paramref name="place"/>, held as bytes encoded as <paramref name="encoding"/>, as its payload: an integer, a <c>Boolean</c> as its
     /// -1 or 0 and a <c>Currency</c> as its ten-thousandths in <paramref name="integral"/>; a <c>Single</c>, a <c>Double</c> or the serial of a <c>Date</c>
     /// in <paramref name="floating"/>, the other being 0.
     /// </summary>
     /// <remarks>
-    /// The field's bytes are read where the block holds them: no cell is made of the field, and no value is boxed. Whether the field is known is not
-    /// read (<see cref="RecordBlock.IsKnown"/>).
+    /// The field's bytes are read where the block holds them: no cell is made of the field, no view is made of a record it is in, and no value is boxed.
+    /// Whether the field is known is not read (<see cref="RecordBlock.IsKnown"/>).
     /// </remarks>
-    /// <param name="index">The field's position in declaration order.</param>
+    /// <param name="place">
+    /// The field's place in the record (<see cref="RecordShape.PlaceOf"/>): its position in declaration order for a field of the record itself.
+    /// </param>
     /// <param name="encoding">How the field's value is encoded, which the caller expects.</param>
     /// <param name="integral">The payload of an encoding of an integer, a <c>Boolean</c> or a <c>Currency</c>.</param>
     /// <param name="floating">The payload of an encoding of a <c>Single</c> or a <c>Double</c>.</param>
     /// <returns><see langword="false"/> when there is no field there, or it is not held as bytes encoded as <paramref name="encoding"/>.</returns>
-    public bool TryReadBytesField(int index, RecordFieldEncoding encoding, out long integral, out double floating)
+    public bool TryReadBytesField(int place, RecordFieldEncoding encoding, out long integral, out double floating)
     {
-        if (!IsBytesField(index, encoding, out var field))
+        if (!_shape.IsBytesAt(place, encoding, out var offset))
         {
             (integral, floating) = (0, 0);
             return false;
         }
 
-        RecordBytesCell.Read(_block.Bytes.AsSpan(_offset + field.Offset), encoding, out integral, out floating);
+        RecordBytesCell.Read(_block.Bytes.AsSpan(_offset + offset), encoding, out integral, out floating);
         return true;
     }
 
     /// <summary>
-    /// Let-assigns a payload to the field at <paramref name="index"/>, held as bytes encoded as <paramref name="encoding"/>, as
+    /// Let-assigns a payload to the field at <paramref name="place"/>, held as bytes encoded as <paramref name="encoding"/>, as
     /// <see cref="TryReadBytesField"/> reads one: the field is known, and its cell, if one was made, reads what was written.
     /// </summary>
     /// <remarks>
     /// The payload is a value of the field's type: what a let-coercion to that type makes (<strong>MS-VBAL §5.5.1.2</strong>). No cell is made of the
-    /// field, and no value is boxed.
+    /// field, no view is made of a record it is in, and no value is boxed.
     /// </remarks>
-    /// <param name="index">The field's position in declaration order.</param>
+    /// <param name="place">
+    /// The field's place in the record (<see cref="RecordShape.PlaceOf"/>): its position in declaration order for a field of the record itself.
+    /// </param>
     /// <param name="encoding">How the field's value is encoded, which the caller expects.</param>
     /// <param name="integral">The payload of an encoding of an integer, a <c>Boolean</c> or a <c>Currency</c>.</param>
     /// <param name="floating">The payload of an encoding of a <c>Single</c> or a <c>Double</c>.</param>
     /// <returns><see langword="false"/> when there is no field there, or it is not held as bytes encoded as <paramref name="encoding"/>: nothing is
     /// written.</returns>
     /// <exception cref="OverflowException"><paramref name="integral"/> is out of the range of <paramref name="encoding"/>.</exception>
-    public bool TryWriteBytesField(int index, RecordFieldEncoding encoding, long integral, double floating)
+    public bool TryWriteBytesField(int place, RecordFieldEncoding encoding, long integral, double floating)
     {
-        if (!IsBytesField(index, encoding, out var field))
+        if (!_shape.IsBytesAt(place, encoding, out var offset))
         {
             return false;
         }
 
-        RecordBytesCell.Write(_block.Bytes.AsSpan(_offset + field.Offset), encoding, integral, floating);
-        var place = _place + field.Place;
-        if (_block.MadeAt(place) is VBTypedValue { Handle: RecordBytesCell cell })
+        RecordBytesCell.Write(_block.Bytes.AsSpan(_offset + offset), encoding, integral, floating);
+        var at = _place + place;
+        if (_block.MadeAt(at) is VBTypedValue { Handle: RecordBytesCell cell })
         {
             cell.Reread();
         }
 
-        _block.Know(place, isKnown: true);
+        _block.Know(at, isKnown: true);
         return true;
-    }
-
-    private bool IsBytesField(int index, RecordFieldEncoding encoding, out RecordShapeField field)
-    {
-        field = IsField(index) ? _shape.Fields[index] : default;
-        return IsField(index) && field.Kind == RecordFieldKind.Bytes && field.Encoding == encoding && encoding != RecordFieldEncoding.None;
     }
 
     private bool IsField(int index) => index >= 0 && index < _shape.Fields.Length;
