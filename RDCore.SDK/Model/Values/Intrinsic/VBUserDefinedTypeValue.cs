@@ -18,8 +18,9 @@ namespace RDCore.SDK.Model.Values.Intrinsic;
 /// <remarks>
 /// A record is a view of a <see cref="ValueBlock"/>, which holds its fields as its <see cref="RecordShape"/> lays them out: a field of a fixed-width
 /// intrinsic type as bytes, a nested record inline, and any other field in a reference slot. A nested record is a view of the same block at the nested
-/// record's offsets. Declaration order is the order <strong>MS-VBAL §5.4.5.11</strong> writes a record in, and the order <see cref="VBUserDefinedTypeLayout"/>
-/// assigns offsets in, and a field's index in this type's members is its position in declaration order.
+/// record's offsets, and an element of an array of records is a view of the array's block at the element's offsets. Declaration order is the order
+/// <strong>MS-VBAL §5.4.5.11</strong> writes a record in, and the order <see cref="VBUserDefinedTypeLayout"/> assigns offsets in, and a field's index in
+/// this type's members is its position in declaration order.
 /// </remarks>
 public record class VBUserDefinedTypeValue : VBTypedValue,
     IVBTypedValue<VBUserDefinedTypeValue, MemoryAddress>
@@ -80,7 +81,8 @@ public record class VBUserDefinedTypeValue : VBTypedValue,
     /// </summary>
     /// <param name="handle">The binding of the record.</param>
     /// <param name="block">The block of the record.</param>
-    /// <exception cref="ArgumentException"><paramref name="block"/> holds the elements of an array, which have no record shape.</exception>
+    /// <exception cref="ArgumentException"><paramref name="block"/> holds the elements of an array, whose <see cref="ValueBlock.Shape"/> is
+    /// <see langword="null"/>.</exception>
     public VBUserDefinedTypeValue(IBindingHandle handle, ValueBlock block)
         : this(handle, block, block.Shape ?? throw new ArgumentException("the block holds the elements of an array.", nameof(block)),
             offset: 0, slot: 0, place: 0) { }
@@ -92,6 +94,39 @@ public record class VBUserDefinedTypeValue : VBTypedValue,
         Handle = handle;
         Fields = shape.Type.DeclaredFields;
         (_block, _shape, _offset, _slot, _place) = (block, shape, offset, slot, place);
+    }
+
+    // the element at index of an array's block of records of shape, each field as start holds it, or its type's default without one: start is a record of
+    // shape that each element of the array starts as, whose bytes are zero and known, as a record's are when it starts.
+    internal static VBUserDefinedTypeValue ElementOf(ValueBlock block, RecordShape shape, int index, VBUserDefinedTypeValue? start)
+    {
+        var element = new VBUserDefinedTypeValue(new ValueBindingHandle(new VBRuntimeReference(MemoryAddress.Zero)), block, shape, index * shape.ByteSize,
+            index * shape.SlotCount, index * shape.PlaceCount);
+        if (shape.SlotCount == 0)
+        {
+            return element;
+        }
+
+        if (start is null)
+        {
+            element.Start(defaults: null);
+        }
+        else
+        {
+            element.CopyKnowledgeAndSlots(shape, start, element._slot, element._place, start._slot, start._place);
+        }
+
+        return element;
+    }
+
+    // the element at index of an array's block of records of source's shape, a copy of source as DataCopy makes one: the element of the array's copy.
+    internal static VBUserDefinedTypeValue ElementCopyOf(ValueBlock block, int index, VBUserDefinedTypeValue source)
+    {
+        var shape = source._shape;
+        var copy = new VBUserDefinedTypeValue(InvalidBindingHandle.Default, block, shape, index * shape.ByteSize, index * shape.SlotCount,
+            index * shape.PlaceCount);
+        copy.CopyFrom(source);
+        return copy;
     }
 
     // a `with` copy is another view of the same record, at the same offsets: a write to a field through one is a write through the other. The copy an

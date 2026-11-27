@@ -8,8 +8,9 @@ using System.Buffers.Binary;
 namespace RDCore.SDK.Model.Values.Intrinsic;
 
 /// <summary>
-/// The storage of one record of a <see cref="VBUserDefinedType"/>, or of the elements of an array of a fixed-width intrinsic type: the bytes of its fields or
-/// elements of fixed-width intrinsic types, the reference slots of a record's other fields, and whether each field or element is known.
+/// The storage of one record of a <see cref="VBUserDefinedType"/>, or of the elements of an array of a fixed-width intrinsic type or of a user-defined type:
+/// the bytes of its fields or elements of fixed-width intrinsic types, the reference slots of a record's other fields, and whether each field or element is
+/// known.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -17,8 +18,10 @@ namespace RDCore.SDK.Model.Values.Intrinsic;
 /// record it is: the record itself, or a record it nests.
 /// </para>
 /// <para>
-/// An array's block holds its elements side by side in the order <see cref="VBArrayValue.ElementAt"/> reads them, each the width of its encoding
-/// (<see cref="VBArrayValue.ElementEncoding"/>), and an element's place is its flat index.
+/// An array's block holds its elements side by side in the order <see cref="VBArrayValue.ElementAt"/> reads them. An element of a fixed-width intrinsic type
+/// is the width of its encoding (<see cref="VBArrayValue.ElementEncoding"/>), and its place is its flat index. An element that is a record is laid out as its
+/// shape says, at its flat index times the shape's <see cref="RecordShape.ByteSize"/>, <see cref="RecordShape.SlotCount"/> and
+/// <see cref="RecordShape.PlaceCount"/>, and is a view of the block there.
 /// </para>
 /// <para>
 /// A field's or an element's cell, the binding a <c>ByRef</c> parameter given it is bound to (<strong>MS-VBAL §5.3.1.11</strong>), and the view of a nested
@@ -46,6 +49,13 @@ public sealed class ValueBlock
     {
     }
 
+    // the block of the elements of an array of records of shape, laid end to end: their bytes zero and their slots empty.
+    internal ValueBlock(RecordShape shape, int length)
+        : this(null, length * shape.ByteSize == 0 ? [] : new byte[length * shape.ByteSize],
+            length * shape.SlotCount == 0 ? [] : new VBTypedValue[length * shape.SlotCount], length * shape.PlaceCount)
+    {
+    }
+
     private ValueBlock(RecordShape? shape, byte[] bytes, VBTypedValue[] slots, int placeCount)
     {
         Shape = shape;
@@ -69,7 +79,8 @@ public sealed class ValueBlock
     public byte[] Bytes { get; }
 
     /// <summary>
-    /// The values of the record's reference fields, each in the slot its shape gives it; none in an array's block.
+    /// The values of the reference fields of the record, or of the array's records, each in the slot its shape gives it; none in the block of an array of a
+    /// fixed-width intrinsic type.
     /// </summary>
     public VBTypedValue[] Slots { get; }
 
