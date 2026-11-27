@@ -31,16 +31,17 @@ public sealed class ModuleIndenterBlocksTests
         => new(Id(module), At(module, header, 0, last, last == header ? "Public Sub Log()".Length : "End Sub".Length),
             [.. beeps.Select(line => new KeywordStatementNode(Id(module), At(module, line, 0, line, 4), "Beep", []))], name, MemberKind.Procedure);
 
-    // the file's parse: its own module's tree, which has Main, and one block, Logger, whose tree has Log.
-    private static ModuleParseResult Parse(int lines, MemberDeclarationNode main, int header, int end, MemberDeclarationNode log)
+    // the file's parse: its own module's tree, which has Main, and one block, Logger, whose tree has its procedures.
+    private static ModuleParseResult Parse(int lines, MemberDeclarationNode main, int header, int end, params MemberDeclarationNode[] procedures)
     {
         var block = new BlockModule("Logger", ModuleType.StdModule, Logger, new SourceRange(header, 0, end, 10),
-            new ModuleNode(Id(Logger), At(Logger, header + 1, 0, end, 0), [log]));
+            new ModuleNode(Id(Logger), At(Logger, header + 1, 0, end, 0), [.. procedures]));
         return ModuleParseResult.Success(new ModuleNode(Id(File), At(File, 0, 0, lines, 0), [main])) with { BlockModules = [block] };
     }
 
     private static string Text(params string[] lines) => string.Join("\r\n", lines) + "\r\n";
 
+    // the procedures of a block are its module's: they are spaced as the module spaces them, and their lines indented as its tree has them.
     [TestMethod]
     public void TheLinesOfABlock_AreIndentedAsItsModuleHasThem_AndItsHeaderAndEndAsTheFilesOwnModuleHasThem()
     {
@@ -53,8 +54,10 @@ public sealed class ModuleIndenterBlocksTests
             "Public Sub Log()",
             "Beep",
             "End Sub",
+            "Public Sub Flush()",
+            "End Sub",
             "  End Module");
-        var parse = Parse(9, Sub(File, "Main", 0, 2, 1), 4, 8, Sub(Logger, "Log", 5, 7, 6));
+        var parse = Parse(11, Sub(File, "Main", 0, 2, 1), 4, 10, Sub(Logger, "Log", 5, 7, 6), Sub(Logger, "Flush", 8, 9));
 
         var indented = ModuleIndenter.Apply(text, ModuleIndenter.Indent(parse, text, CodeFormattingOptions.Default));
 
@@ -66,6 +69,9 @@ public sealed class ModuleIndenterBlocksTests
             "Module Logger",
             "Public Sub Log()",
             "    Beep",
+            "End Sub",
+            "",
+            "Public Sub Flush()",
             "End Sub",
             "End Module"), indented);
     }
