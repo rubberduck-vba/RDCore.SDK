@@ -1,0 +1,210 @@
+using RDCore.SDK.Model;
+using RDCore.SDK.Model.Source;
+using RDCore.SDK.Model.Symbols.Abstract;
+using RDCore.SDK.Model.Symbols.VBProject;
+using RDCore.SDK.Model.Types;
+using RDCore.SDK.Model.Types.Abstract;
+using RDCore.SDK.Model.Values.Abstract;
+using RDCore.SDK.Model.Values.Bindings;
+using RDCore.SDK.Model.Values.Intrinsic;
+
+namespace RDCore.Tests.Model.Values;
+
+/// <summary>
+/// A record as a view of its <see cref="RecordBlock"/>: fields of fixed-width intrinsic types held as bytes, a nested record inline, any other field in a
+/// reference slot (<see cref="RecordShape"/>), and the record's semantics kept over them: a field's cell is one cell, a <c>with</c> copy is another view of
+/// the record, and the copy an assignment makes shares nothing (<strong>MS-VBAL §5.4.3.8</strong>).
+/// </summary>
+[TestClass]
+public sealed class RecordBlockTests
+{
+    private static VBUserDefinedType Udt(string name, params (string Name, VBType Type)[] fields)
+    {
+        var uri = TestUri.TestModuleUserDefinedTypeUri(name);
+        var symbol = new VBUserDefinedTypeMemberSymbol(uri, uri, name, ScopeKind.Module, SourceRange.Empty, SourceRange.Empty, AccessModifier.Public);
+        return new VBUserDefinedType(symbol, [.. fields.Select(field => Field(name, field.Name, field.Type))]);
+    }
+
+    private static VBUserDefinedTypeFieldSymbol Field(string typeName, string name, VBType type)
+    {
+        var uri = TestUri.TestUserDefinedTypeMemberUri(name, typeName);
+        return new VBUserDefinedTypeFieldSymbol(uri, uri, name, type, SourceRange.Empty, SourceRange.Empty, AccessModifier.Public);
+    }
+
+    // a value of each type a bytes field holds, other than the type's default, and the type.
+    private static (VBType Type, VBTypedValue Value) Sample(string type) => type switch
+    {
+        "Byte" => (VBByteType.TypeInfo, new VBByteValue(200)),
+        "Integer" => (VBIntegerType.TypeInfo, new VBIntegerValue(-1234)),
+        "Boolean" => (VBBooleanType.TypeInfo, new VBBooleanValue(true)),
+        "Long" => (VBLongType.TypeInfo, new VBLongValue(-123456789)),
+        "LongLong" => (VBLongLongType.TypeInfo, new VBLongLongValue(1L << 40)),
+        "Single" => (VBSingleType.TypeInfo, new VBSingleValue(1.5f)),
+        "Double" => (VBDoubleType.TypeInfo, new VBDoubleValue(-2.25)),
+        "Currency" => (VBCurrencyType.TypeInfo, new VBCurrencyValue(12.3456m)),
+        "Date" => (VBDateType.TypeInfo, new VBDateValue(45000.5)),
+        _ => throw new ArgumentOutOfRangeException(nameof(type)),
+    };
+
+    private static VBTypedValue Text(string text) => new VBStringValue(text);
+
+    // a field of each fixed-width type is bytes of the record, and reads back what it was let, beside a String field held in a slot.
+    [TestMethod]
+    [DataRow("Byte")]
+    [DataRow("Integer")]
+    [DataRow("Boolean")]
+    [DataRow("Long")]
+    [DataRow("LongLong")]
+    [DataRow("Single")]
+    [DataRow("Double")]
+    [DataRow("Currency")]
+    [DataRow("Date")]
+    public void AFieldOfAFixedWidthType_IsBytesOfTheRecord_AndReadsWhatItWasLet(string type)
+    {
+        var (fieldType, value) = Sample(type);
+        var record = new VBUserDefinedTypeValue(Udt("T", ("S", VBStringType.TypeInfo), ("F", fieldType)));
+        Assert.AreEqual(RecordFieldKind.Bytes, record.Shape.Fields[1].Kind);
+        Assert.AreEqual(RecordFieldKind.Reference, record.Shape.Fields[0].Kind);
+        Assert.AreNotEqual(value.RuntimeValue.BoxedValue, record.FieldAt(1)!.RuntimeValue.BoxedValue, "the premise: the value is not the default");
+
+        Assert.IsTrue(record.TryLetFieldAt(1, value));
+
+        Assert.AreEqual(value.RuntimeValue, record.FieldAt(1)!.RuntimeValue);
+        Assert.AreEqual(value.GetType(), record.FieldAt(1)!.GetType());
+        Assert.IsTrue(record.Block.Bytes.Any(each => each != 0), "the value is in the record's bytes");
+    }
+
+    // the bytes fields of a record each have bytes of their own: a value let to each is read back from each, none written over by another.
+    [TestMethod]
+    public void EachBytesField_HasBytesOfItsOwn()
+    {
+        string[] types = ["Byte", "Integer", "Boolean", "Long", "LongLong", "Single", "Double", "Currency", "Date"];
+        var samples = types.Select(Sample).ToArray();
+        var record = new VBUserDefinedTypeValue(Udt("T", [.. samples.Select((sample, at) => ($"F{at}", sample.Type))]));
+
+        for (var at = 0; at < samples.Length; at++)
+        {
+            Assert.IsTrue(record.TryLetFieldAt(at, samples[at].Value));
+        }
+
+        for (var at = 0; at < samples.Length; at++)
+        {
+            Assert.AreEqual(samples[at].Value.RuntimeValue, record.FieldAt(at)!.RuntimeValue, types[at]);
+        }
+    }
+
+    // a field's cell is one cell however often it is asked for: a ByRef parameter given the field reads what the field is let, and the field reads what is
+    // stored in the cell (MS-VBAL §5.3.1.11).
+    [TestMethod]
+    public void ABytesFieldsCell_IsOneCell_ThatTheFieldIsReadAndWrittenThrough()
+    {
+        var record = new VBUserDefinedTypeValue(Udt("T", ("N", VBLongType.TypeInfo)));
+        var cell = (IKnowledgeBinding)record.GetFieldHandle("N")!;
+        Assert.AreSame(cell, record.StoredFieldAt(0)!.Handle);
+
+        Assert.IsTrue(record.TryLetFieldAt(0, new VBLongValue(7)));
+        Assert.AreEqual(new VBLongValue(7).RuntimeValue, cell.Value);
+
+        cell.Store(new VBLongValue(9).RuntimeValue, isKnown: true);
+        Assert.AreEqual(new VBLongValue(9).RuntimeValue, record.FieldAt(0)!.RuntimeValue);
+    }
+
+    // a nested record is inline: its bytes and its slots are the outer record's, and its view is one view, whose fields are written in the outer block.
+    [TestMethod]
+    public void ANestedRecord_IsInline_AndOneView()
+    {
+        var inner = Udt("TInner", ("X", VBLongType.TypeInfo), ("S", VBStringType.TypeInfo));
+        var outer = new VBUserDefinedTypeValue(Udt("TOuter", ("A", VBLongType.TypeInfo), ("In", inner)));
+        Assert.AreEqual(RecordFieldKind.Nested, outer.Shape.Fields[1].Kind);
+        Assert.AreEqual(1, outer.Shape.SlotCount, "the nested record's String is a slot of the outer record");
+
+        var view = (VBUserDefinedTypeValue)outer.StoredFieldAt(1)!;
+        Assert.AreSame(view, outer.StoredFieldAt(1));
+        Assert.AreSame(outer.Block, view.Block);
+
+        Assert.IsTrue(view.TryLetFieldAt(0, new VBLongValue(5)));
+        Assert.IsTrue(view.TryLetFieldAt(1, Text("in")));
+        Assert.IsTrue(outer.TryLetFieldAt(0, new VBLongValue(6)));
+
+        Assert.AreEqual(new VBLongValue(5).RuntimeValue, view.FieldAt(0)!.RuntimeValue);
+        Assert.AreEqual("in", view.FieldAt(1)!.RuntimeValue.BoxedValue);
+        Assert.AreEqual(new VBLongValue(6).RuntimeValue, outer.FieldAt(0)!.RuntimeValue);
+    }
+
+    // a `with` copy is another view of the same record: a field let through one is read through the other.
+    [TestMethod]
+    public void AWithCopy_IsAnotherViewOfTheRecord()
+    {
+        var record = new VBUserDefinedTypeValue(Udt("T", ("N", VBLongType.TypeInfo), ("S", VBStringType.TypeInfo)));
+        var view = record with { };
+
+        Assert.IsTrue(view.TryLetFieldAt(0, new VBLongValue(3)));
+        Assert.IsTrue(view.TryLetFieldAt(1, Text("x")));
+
+        Assert.AreEqual(new VBLongValue(3).RuntimeValue, record.FieldAt(0)!.RuntimeValue);
+        Assert.AreEqual("x", record.FieldAt(1)!.RuntimeValue.BoxedValue);
+    }
+
+    // the copy an assignment makes shares no cell with the record, nested record included: what is let to the copy is not the record's, and what the
+    // record held is the copy's.
+    [TestMethod]
+    public void ADataCopy_SharesNothing_AndHoldsWhatTheRecordHeld()
+    {
+        var inner = Udt("TInner", ("X", VBLongType.TypeInfo), ("S", VBStringType.TypeInfo));
+        var record = new VBUserDefinedTypeValue(Udt("TOuter", ("N", VBLongType.TypeInfo), ("In", inner)));
+        var nested = (VBUserDefinedTypeValue)record.StoredFieldAt(1)!;
+        _ = record.TryLetFieldAt(0, new VBLongValue(1));
+        _ = nested.TryLetFieldAt(0, new VBLongValue(2));
+        _ = nested.TryLetFieldAt(1, Text("a"));
+
+        var copy = record.DataCopy();
+        var copied = (VBUserDefinedTypeValue)copy.StoredFieldAt(1)!;
+        Assert.AreNotSame(record.Block, copy.Block);
+        Assert.AreNotSame(nested.StoredFieldAt(1)!.Handle, copied.StoredFieldAt(1)!.Handle, "the String field's cell is the copy's own");
+        Assert.AreEqual(new VBLongValue(1).RuntimeValue, copy.FieldAt(0)!.RuntimeValue);
+        Assert.AreEqual(new VBLongValue(2).RuntimeValue, copied.FieldAt(0)!.RuntimeValue);
+        Assert.AreEqual("a", copied.FieldAt(1)!.RuntimeValue.BoxedValue);
+
+        _ = copy.TryLetFieldAt(0, new VBLongValue(10));
+        _ = copied.TryLetFieldAt(0, new VBLongValue(20));
+        _ = copied.TryLetFieldAt(1, Text("b"));
+
+        Assert.AreEqual(new VBLongValue(1).RuntimeValue, record.FieldAt(0)!.RuntimeValue);
+        Assert.AreEqual(new VBLongValue(2).RuntimeValue, nested.FieldAt(0)!.RuntimeValue);
+        Assert.AreEqual("a", nested.FieldAt(1)!.RuntimeValue.BoxedValue);
+    }
+
+    // a record let another in place: a cell taken from it before (a ByRef parameter given a field) reads what was let, and the record reads what the
+    // source held, whether or not each field was known.
+    [TestMethod]
+    public void ARecordLetAnother_IsWrittenInPlace_AndItsCellsReadWhatWasLet()
+    {
+        var type = Udt("T", ("N", VBLongType.TypeInfo), ("M", VBLongType.TypeInfo), ("S", VBStringType.TypeInfo));
+        var record = new VBUserDefinedTypeValue(type);
+        var cell = record.GetFieldHandle("N")!;
+        Assert.AreEqual(new VBLongValue(0).RuntimeValue, cell.Value, "the premise: the cell was read before the Let");
+        var source = new VBUserDefinedTypeValue(type);
+        _ = source.TryLetFieldAt(0, new VBLongValue(4));
+        _ = source.TryLetFieldAt(2, Text("s"));
+        ((IKnowledgeBinding)source.GetFieldHandle("M")!).Forget();
+
+        Assert.IsTrue(record.TryLetFrom(source.DataCopy()));
+
+        Assert.AreEqual(new VBLongValue(4).RuntimeValue, cell.Value);
+        Assert.AreEqual("s", record.FieldAt(2)!.RuntimeValue.BoxedValue);
+        Assert.IsFalse(record.FieldAt(0)!.IsIndeterminate);
+        Assert.IsTrue(record.FieldAt(1)!.IsIndeterminate, "a field not known in the source is not known in the record");
+    }
+
+    // a record of another type is not let, and nothing of it is written.
+    [TestMethod]
+    public void ARecordOfAnotherType_IsNotLet()
+    {
+        var record = new VBUserDefinedTypeValue(Udt("T", ("N", VBLongType.TypeInfo)));
+        var other = new VBUserDefinedTypeValue(Udt("U", ("N", VBLongType.TypeInfo)));
+        _ = other.TryLetFieldAt(0, new VBLongValue(8));
+
+        Assert.IsFalse(record.TryLetFrom(other));
+        Assert.AreEqual(new VBLongValue(0).RuntimeValue, record.FieldAt(0)!.RuntimeValue);
+    }
+}
