@@ -57,8 +57,8 @@ public abstract record class VBArrayValue : VBTypedValue
     /// first element is made, and each element starts as the record it gives.</param>
     /// <param name="elementCell">Makes the cell each element is stored in, holding the element type's default value, when the runtime stores elements of
     /// <paramref name="itemType"/> in cells of its own (<see cref="IVariableDefaults.ElementCellOf"/>); <see langword="null"/> for a cell that holds the
-    /// default value as it is. Not used for an element that is a record, which starts as <paramref name="elementDefault"/> says, nor for an element held as bytes
-    /// (<see cref="ElementEncoding"/>).</param>
+    /// default value as it is. Not used for an element that is a record, which starts as <paramref name="elementDefault"/> says, nor for an element held as
+    /// bytes (<see cref="ElementEncoding"/>).</param>
     protected VBArrayValue((int lBound, int uBound)[] dimensions, VBType itemType, Func<VBTypedValue>? elementDefault = null, Func<IBindingHandle>? elementCell = null)
         : base(VBArrayType.TypeInfo)
     {
