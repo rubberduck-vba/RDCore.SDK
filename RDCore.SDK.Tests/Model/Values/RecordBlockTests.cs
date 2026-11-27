@@ -74,6 +74,50 @@ public sealed class RecordBlockTests
         Assert.IsTrue(record.Block.Bytes.Any(each => each != 0), "the value is in the record's bytes");
     }
 
+    // a bytes field's payload written in its bytes: the cell made of the field before reads the value the payload is, the field is known, and the
+    // payload is read back. A Boolean is its -1, a Currency its ten-thousandths, a Date its serial.
+    [TestMethod]
+    [DataRow("Byte", 200L, 0d)]
+    [DataRow("Integer", -1234L, 0d)]
+    [DataRow("Boolean", -1L, 0d)]
+    [DataRow("Long", -123456789L, 0d)]
+    [DataRow("LongLong", 1L << 40, 0d)]
+    [DataRow("Single", 0L, 1.5d)]
+    [DataRow("Double", 0L, -2.25d)]
+    [DataRow("Currency", 123456L, 0d)]
+    [DataRow("Date", 0L, 45000.5d)]
+    public void ABytesFieldsPayload_IsWrittenInItsBytes_AndItsCellReadsIt(string type, long integral, double floating)
+    {
+        var (fieldType, value) = Sample(type);
+        var record = new VBUserDefinedTypeValue(Udt("T", ("S", VBStringType.TypeInfo), ("F", fieldType)));
+        var encoding = record.Shape.Fields[1].Encoding;
+        var cell = (IKnowledgeBinding)record.GetFieldHandle("F")!;
+        Assert.AreNotEqual(value.RuntimeValue, cell.Value, "the premise: the cell was read before the write");
+        cell.Forget();
+
+        Assert.IsTrue(record.TryWriteBytesField(1, encoding, integral, floating));
+
+        Assert.AreEqual(value.RuntimeValue, cell.Value, "the cell reads what was written");
+        Assert.IsTrue(cell.IsKnown);
+        Assert.IsTrue(record.TryReadBytesField(1, encoding, out var readIntegral, out var readFloating));
+        Assert.AreEqual((integral, floating), (readIntegral, readFloating));
+    }
+
+    // a payload is written only to a bytes field of the encoding the caller expects; nothing is written otherwise.
+    [TestMethod]
+    public void ABytesFieldsPayload_IsNotWritten_ToAFieldOfAnotherEncodingOrKind()
+    {
+        var record = new VBUserDefinedTypeValue(Udt("T", ("S", VBStringType.TypeInfo), ("N", VBLongType.TypeInfo)));
+
+        Assert.IsFalse(record.TryWriteBytesField(1, RecordFieldEncoding.Int16, 5, 0));
+        Assert.IsFalse(record.TryWriteBytesField(0, RecordFieldEncoding.None, 5, 0));
+        Assert.IsFalse(record.TryWriteBytesField(2, RecordFieldEncoding.Int32, 5, 0));
+        Assert.IsFalse(record.TryReadBytesField(0, RecordFieldEncoding.Int32, out _, out _));
+
+        Assert.AreEqual(new VBLongValue(0).RuntimeValue, record.FieldAt(1)!.RuntimeValue);
+        Assert.IsTrue(record.Block.Bytes.All(each => each == 0));
+    }
+
     // the bytes fields of a record each have bytes of their own: a value let to each is read back from each, none written over by another.
     [TestMethod]
     public void EachBytesField_HasBytesOfItsOwn()

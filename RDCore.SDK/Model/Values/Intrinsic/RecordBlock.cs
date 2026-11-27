@@ -160,6 +160,52 @@ public sealed class RecordBytesCell : IKnowledgeBinding
     /// <inheritdoc/>
     public void Forget() => Block.Know(Place, isKnown: false);
 
+    // the field's bytes were written other than through this cell: it decodes them on its next read.
+    internal void Reread() => _read = null;
+
+    // the payload of a field's bytes: an integer, a Boolean's -1 or 0 or a Currency's ten-thousandths as a long; a Single or a Double as a double.
+    internal static void Read(ReadOnlySpan<byte> bytes, RecordFieldEncoding encoding, out long integral, out double floating)
+    {
+        (integral, floating) = encoding switch
+        {
+            RecordFieldEncoding.Byte => ((long)bytes[0], 0d),
+            RecordFieldEncoding.Int16 or RecordFieldEncoding.Boolean => ((long)BinaryPrimitives.ReadInt16LittleEndian(bytes), 0d),
+            RecordFieldEncoding.Int32 => ((long)BinaryPrimitives.ReadInt32LittleEndian(bytes), 0d),
+            RecordFieldEncoding.Int64 or RecordFieldEncoding.Currency => (BinaryPrimitives.ReadInt64LittleEndian(bytes), 0d),
+            RecordFieldEncoding.Single => (0L, (double)BinaryPrimitives.ReadSingleLittleEndian(bytes)),
+            RecordFieldEncoding.Double => (0L, BinaryPrimitives.ReadDoubleLittleEndian(bytes)),
+            _ => throw new ArgumentOutOfRangeException(nameof(encoding)),
+        };
+    }
+
+    // a payload written to a field's bytes, as Read reads it.
+    internal static void Write(Span<byte> bytes, RecordFieldEncoding encoding, long integral, double floating)
+    {
+        switch (encoding)
+        {
+            case RecordFieldEncoding.Byte:
+                bytes[0] = checked((byte)integral);
+                break;
+            case RecordFieldEncoding.Int16 or RecordFieldEncoding.Boolean:
+                BinaryPrimitives.WriteInt16LittleEndian(bytes, checked((short)integral));
+                break;
+            case RecordFieldEncoding.Int32:
+                BinaryPrimitives.WriteInt32LittleEndian(bytes, checked((int)integral));
+                break;
+            case RecordFieldEncoding.Int64 or RecordFieldEncoding.Currency:
+                BinaryPrimitives.WriteInt64LittleEndian(bytes, integral);
+                break;
+            case RecordFieldEncoding.Single:
+                BinaryPrimitives.WriteSingleLittleEndian(bytes, (float)floating);
+                break;
+            case RecordFieldEncoding.Double:
+                BinaryPrimitives.WriteDoubleLittleEndian(bytes, floating);
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(encoding));
+        }
+    }
+
     /// <inheritdoc/>
     public IRuntimeValue Invoke(IRuntimeSymbolResolver resolver, IRuntimeValue[] args) => throw new NotSupportedException();
 
