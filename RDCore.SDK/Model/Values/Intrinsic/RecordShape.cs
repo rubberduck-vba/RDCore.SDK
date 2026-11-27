@@ -12,9 +12,9 @@ namespace RDCore.SDK.Model.Values.Intrinsic;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The bytes of a block are laid out by the shape, each field at an offset aligned to its own width, in declaration order. They are not the record's
-/// memory image (<see cref="VBUserDefinedTypeLayout"/>), which depends on the pointer width and on the lengths of fixed-size array fields: a shape is one
-/// per type, whatever the pointer width, so that an offset into the bytes is a constant for the type.
+/// The bytes of a block are laid out by the shape in declaration order, a bytes field at an offset aligned to its own width and a nested record at a
+/// multiple of 8. They are not the record's memory image (<see cref="VBUserDefinedTypeLayout"/>), which depends on the pointer width and on the lengths
+/// of fixed-size array fields: a shape is one per type, so that an offset into the bytes is a constant for the type.
 /// </para>
 /// <para>
 /// A field is held as bytes when its type is <c>Byte</c>, <c>Integer</c>, <c>Boolean</c>, <c>Long</c>, <c>LongLong</c>, <c>LongPtr</c>, <c>Single</c>,
@@ -180,7 +180,7 @@ public enum RecordFieldKind
 public enum RecordFieldEncoding
 {
     /// <summary>
-    /// The field is no bytes field.
+    /// The field is not a bytes field.
     /// </summary>
     None,
 

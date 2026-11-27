@@ -45,7 +45,8 @@ public record class VBUserDefinedTypeValue : VBTypedValue,
     /// <remarks>
     /// A field is declared as a variable is (<strong>MS-VBAL §5.2.3.3</strong>), and a fixed-size array field is as big as its declaration's
     /// bounds, constant expressions that the field's symbol carries and that only the runtime reduces: the type's own default gives such a field
-    /// no dimensions. This is the record a declared variable of the type starts as.
+    /// no dimensions. A field held as bytes starts as zero bytes: 0, <c>False</c>, or the date whose serial is 0, the default of each type such a field
+    /// has. This is the record a declared variable of the type starts as.
     /// </remarks>
     /// <param name="typeInfo">The type of the record.</param>
     /// <param name="fieldDefaults">What each field, a typed symbol, starts as.</param>
@@ -111,7 +112,7 @@ public record class VBUserDefinedTypeValue : VBTypedValue,
     public RecordShape Shape => _shape;
 
     /// <summary>
-    /// Where this record's bytes start in <see cref="Block"/>: 0 for a record, the nested record's offset for a record nested in another.
+    /// Where this record's bytes start in <see cref="Block"/>: 0 for a record that is not nested, the nested record's offset for a record nested in another.
     /// </summary>
     public int ByteOffset => _offset;
 
@@ -209,7 +210,7 @@ public record class VBUserDefinedTypeValue : VBTypedValue,
     /// </summary>
     /// <remarks>
     /// <see cref="FieldAt"/> reads a field of a record that is not known as a value that is not known either, which is another binding. A caller
-    /// that needs the cell itself - what the object a field holds is held by - reads it here. A field held as bytes is bound to its
+    /// that needs the cell itself (what the object a field holds is held by) reads it here. A field held as bytes is bound to its
     /// <see cref="RecordBytesCell"/>, and a nested record is a view of this record's block; both are made on first need and kept.
     /// </remarks>
     /// <param name="index">The field's position in declaration order.</param>
@@ -329,12 +330,12 @@ public record class VBUserDefinedTypeValue : VBTypedValue,
     /// Replaces the value of the field at <paramref name="index"/> in declaration order.
     /// </summary>
     /// <remarks>
-    /// A field held in a reference slot is given <paramref name="value"/> itself. A field held as bytes is written <paramref name="value"/> in its
-    /// cell, and a nested record is let <paramref name="value"/> (<see cref="TryLetFrom"/>): neither is a value of its own to replace.
+    /// A field held in a reference slot is given <paramref name="value"/> itself. A field held as bytes has <paramref name="value"/> written in its
+    /// cell, and a nested record has <paramref name="value"/> let into it (<see cref="TryLetFrom"/>): neither is a value of its own to replace.
     /// </remarks>
     /// <param name="index">The field's position in declaration order.</param>
     /// <param name="value">The value to store.</param>
-    /// <returns><c>false</c> when there is no field there, or a nested record is given what is no record of its type.</returns>
+    /// <returns><c>false</c> when there is no field there, or a nested record is given a value that is not a record of its type.</returns>
     public bool TrySetFieldAt(int index, VBTypedValue value)
     {
         if (!IsField(index))
@@ -691,7 +692,7 @@ public record class VBUserDefinedTypeValue : VBTypedValue,
     }
 
     // A fresh value per reference field so a write to one never aliases another: a type's default value is cached and reused by every caller, and both
-    // binding kinds mutate in place, so storing it directly would let a write to one field reach every other value that started from it - the same hazard
+    // binding kinds mutate in place, so storing it directly would let a write to one field reach every other value that started from it: the same hazard
     // SymbolAddressTable.FreshBinding exists for.
     private static VBTypedValue Fresh(VBTypedValue value) => value switch
     {
