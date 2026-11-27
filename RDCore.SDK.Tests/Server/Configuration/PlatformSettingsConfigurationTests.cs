@@ -238,6 +238,8 @@ public sealed class PlatformSettingsConfigurationTests
         Name = $"{title}.exe",
         Title = title,
         Version = new Version(1, 0, 0),
+        // built with this SDK, so Blocked is the only reason it does not load.
+        SdkVersion = ExtensionManifestValidationService.SdkVersion,
         Publisher = "Publisher",
         PublisherWebUrl = "https://example.com",
         Description = "An extension.",
