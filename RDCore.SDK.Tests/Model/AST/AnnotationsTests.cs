@@ -192,4 +192,27 @@ public sealed class AnnotationsTests
         Assert.IsNull(annotation.GetStringArgument(2), "there is no third argument");
         Assert.IsNull(annotation.GetStringArgument(-1));
     }
+
+    [TestMethod]
+    public void TheTextOfAnArgument_IsTheNameAsWritten_OrTheStringTheLiteralWrites()
+    {
+        var annotation = new AnnotationTriviaNode(Id(), Lines(0, 0), "Ignore",
+            [new SimpleNameExpressionNode(Id(), Lines(0, 0), "ProcedureNotUsed"),
+                new LiteralExpressionNode(Id(), Lines(0, 0), new VBStringValue("RDC00315")),
+                new LiteralExpressionNode(Id(), Lines(0, 0), new VBLongValue(42))]);
+
+        Assert.AreEqual("ProcedureNotUsed", annotation.GetArgumentText());
+        Assert.AreEqual("RDC00315", annotation.GetArgumentText(1));
+        Assert.IsNull(annotation.GetArgumentText(2), "a Long literal is neither a name nor a string");
+        Assert.IsNull(annotation.GetArgumentText(3), "there is no fourth argument");
+        Assert.IsNull(annotation.GetArgumentText(-1));
+    }
+
+    [TestMethod]
+    [DataRow("IgnoreModule", true, DisplayName = "as written")]
+    [DataRow("ignoremodule", true, DisplayName = "in another case")]
+    [DataRow("Ignore", false, DisplayName = "a name it starts with")]
+    [DataRow("IgnoreModules", false, DisplayName = "a longer name")]
+    public void AnAnnotation_IsNamed_WhateverTheCaseOfTheName(string name, bool expected)
+        => Assert.AreEqual(expected, Annotation(0, "IgnoreModule").IsNamed(name));
 }
