@@ -87,6 +87,21 @@ public sealed record class RDCoreDocument(Uri File, ModuleParseResult Parse)
         };
     }
 
+    /// <summary>
+    /// The name of one of the file's modules, as RD-VBA names a module (<strong>MS-VBAL §4.2</strong>). The file's own module is named by its
+    /// <c>Attribute VB_Name</c> (<see cref="ModuleNodeExtensions.GetDeclaredName"/>), or by the file's name without its extension when it declares none
+    /// or could not be read (<see cref="ModuleName.FromFileName"/>), as <see cref="ModuleName.Resolve"/> names it from the file's text. A block's module
+    /// is named by its header (<see cref="BlockModule.Name"/>).
+    /// </summary>
+    /// <param name="module">The address of the module: the file's (<see cref="File"/>), or a block's (<see cref="BlockUri"/>).</param>
+    /// <returns>
+    /// The module's name; <see langword="null"/> when the file holds no module at that address. When two blocks have one name, the first block's.
+    /// </returns>
+    public string? NameOf(Uri module)
+        => module == File
+            ? Parse.SyntaxTree?.GetDeclaredName() ?? ModuleName.FromFileName(File.IsAbsoluteUri ? File.LocalPath : File.OriginalString)
+            : Parse.BlockModules.FirstOrDefault(block => block.Uri == module)?.Name;
+
     // whether a position is on a line between a block's header and its end.
     private static bool IsInside(BlockModule block, SourcePosition position)
         => position.Line > block.Range.Start.Line && position.Line < block.Range.End.Line;

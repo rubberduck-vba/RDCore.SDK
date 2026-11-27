@@ -2,6 +2,7 @@ using RDCore.SDK.Model;
 using RDCore.SDK.Model.AST;
 using RDCore.SDK.Model.AST.Abstract;
 using RDCore.SDK.Model.AST.Declarations;
+using RDCore.SDK.Model.AST.Directives;
 using RDCore.SDK.Model.Errors;
 using RDCore.SDK.Model.Source;
 using RDCore.SDK.Workspace;
@@ -116,6 +117,23 @@ public sealed class RDCoreDocumentTests
         Assert.IsNull(new RDCoreDocument(File, withoutBlocks).ParseOf(logger));
         Assert.IsNull(new RDCoreDocument(File, withABlock).ParseOf(RDCoreDocument.BlockUri(File, "Other")));
         Assert.IsNull(new RDCoreDocument(File, withABlock).ParseOf(new Uri("file:///c:/ws/Other.vbs")));
+    }
+
+    [TestMethod]
+    public void EachModule_IsNamedAsRDVBANamesIt_TheFilesOwnByItsVBNameOrItsFile_AndABlocksByItsHeader()
+    {
+        var logger = RDCoreDocument.BlockUri(File, "Logger");
+        var block = new BlockModule("Logger", ModuleType.ClassModule, logger, new SourceRange(2, 0, 5, 9), Module(logger, File, 3, 4));
+        var vbName = new AttributeDirectiveNode(new SyntaxNodeId(File.AbsolutePath, [1]), new SourceLocation(File, new SourceRange(0, 0, 0, 28)),
+            Tokens.VB_Name, "\"Housekeeping\"");
+        var named = new ModuleNode(new SyntaxNodeId(File.AbsolutePath, [0]), new SourceLocation(File, new SourceRange(0, 0, 9, 0)), [vbName]);
+        var document = new RDCoreDocument(File, ModuleParseResult.Success(named) with { BlockModules = [block] });
+
+        Assert.AreEqual("Housekeeping", document.NameOf(File));
+        Assert.AreEqual("Logger", document.NameOf(logger));
+        Assert.AreEqual("Backup", new RDCoreDocument(File, ModuleParseResult.Success(Module(File, File, 0, 9))).NameOf(File), "it says no VB_Name");
+        Assert.AreEqual("Backup", new RDCoreDocument(File, new ModuleParseResult()).NameOf(File), "it could not be read");
+        Assert.IsNull(document.NameOf(new Uri("file:///c:/ws/Other.vbs")));
     }
 
     private static CommentTriviaNode Comment(Uri module, int line, int character)
