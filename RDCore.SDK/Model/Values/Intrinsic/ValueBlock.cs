@@ -152,8 +152,8 @@ public sealed class ValueBlock
 }
 
 /// <summary>
-/// The cell of a bytes field of a record, or of an element of an array of a fixed-width type: what it holds is the bytes of its <see cref="ValueBlock"/> at its
-/// offset, which reading the cell decodes and writing it encodes.
+/// The cell of a bytes field of a record, or of an element of an array of a fixed-width type: what it holds is the bytes of its
+/// <see cref="ValueBlock"/> at its offset, which reading the cell decodes and writing it encodes.
 /// </summary>
 public sealed class BlockBytesCell : IKnowledgeBinding
 {
