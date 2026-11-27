@@ -215,6 +215,16 @@ public record class VBUserDefinedTypeValue : VBTypedValue,
     /// <param name="index">The field's position in declaration order.</param>
     public VBTypedValue? StoredFieldAt(int index) => IsField(index) ? Stored(index) : null;
 
+    /// <summary>
+    /// The values of this record's reference fields, those of the records it nests included, each bound to its own cell as
+    /// <see cref="StoredFieldAt"/> reads it, in the order of their slots in <see cref="Block"/>.
+    /// </summary>
+    /// <remarks>
+    /// A field held as bytes holds a number, a date or a <c>Boolean</c>, never an object or a string. A caller that looks for what the record holds by
+    /// reference reads these, and makes no cell of a field held as bytes.
+    /// </remarks>
+    public ReadOnlySpan<VBTypedValue> ReferenceFields => _block.Slots.AsSpan(_slot, _shape.SlotCount);
+
     private bool IsField(int index) => index >= 0 && index < _shape.Fields.Length;
 
     private VBTypedValue Stored(int index)

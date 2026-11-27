@@ -131,6 +131,24 @@ public sealed class RecordBlockTests
         Assert.AreEqual(new VBLongValue(6).RuntimeValue, outer.FieldAt(0)!.RuntimeValue);
     }
 
+    // a record's reference fields are its own and its nested records', each the value its field stores; a nested record's are its own alone.
+    [TestMethod]
+    public void TheReferenceFields_AreTheStoredValuesOfTheFieldsNotHeldAsBytes_NestedRecordsIncluded()
+    {
+        var inner = Udt("TInner", ("X", VBLongType.TypeInfo), ("S", VBStringType.TypeInfo));
+        var outer = new VBUserDefinedTypeValue(Udt("TOuter", ("A", VBLongType.TypeInfo), ("T", VBStringType.TypeInfo), ("In", inner)));
+        var view = (VBUserDefinedTypeValue)outer.StoredFieldAt(2)!;
+
+        var fields = outer.ReferenceFields.ToArray();
+
+        Assert.HasCount(2, fields);
+        Assert.AreSame(outer.StoredFieldAt(1), fields[0]);
+        Assert.AreSame(view.StoredFieldAt(1), fields[1]);
+        var nested = view.ReferenceFields.ToArray();
+        Assert.HasCount(1, nested);
+        Assert.AreSame(view.StoredFieldAt(1), nested[0]);
+    }
+
     // a `with` copy is another view of the same record: a field let through one is read through the other.
     [TestMethod]
     public void AWithCopy_IsAnotherViewOfTheRecord()
