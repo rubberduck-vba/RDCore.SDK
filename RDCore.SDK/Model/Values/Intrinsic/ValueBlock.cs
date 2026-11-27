@@ -8,16 +8,26 @@ using System.Buffers.Binary;
 namespace RDCore.SDK.Model.Values.Intrinsic;
 
 /// <summary>
-/// The storage of one record of a <see cref="VBUserDefinedType"/>, as its <see cref="RecordShape"/> lays it out: the bytes of its fields of fixed-width
-/// intrinsic types, the reference slots of its other fields, and whether each field is known. A <see cref="VBUserDefinedTypeValue"/> is a view of a block,
-/// at the offsets of the record it is: the record itself, or a record it nests.
+/// The storage of one record of a <see cref="VBUserDefinedType"/>, or of the elements of an array of a fixed-width intrinsic type: the bytes of its fields or
+/// elements of fixed-width intrinsic types, the reference slots of a record's other fields, and whether each field or element is known.
 /// </summary>
 /// <remarks>
-/// A field's cell, the binding a <c>ByRef</c> parameter given the field is bound to (<strong>MS-VBAL §5.3.1.11</strong>), and the view of a nested record are
-/// made on first need and kept in the block for its life, so that every parameter given one field shares one cell.
+/// <para>
+/// A record's block is laid out as its <see cref="RecordShape"/> says. A <see cref="VBUserDefinedTypeValue"/> is a view of a block, at the offsets of the
+/// record it is: the record itself, or a record it nests.
+/// </para>
+/// <para>
+/// An array's block holds its elements side by side in the order <see cref="VBArrayValue.ElementAt"/> reads them, each the width of its encoding
+/// (<see cref="VBArrayValue.ElementEncoding"/>), and an element's place is its flat index.
+/// </para>
+/// <para>
+/// A field's or an element's cell, the binding a <c>ByRef</c> parameter given it is bound to (<strong>MS-VBAL §5.3.1.11</strong>), and the view of a nested
+/// record are made on first need and kept for the block's life, so that every parameter given one field or element shares one cell.
+/// </para>
 /// </remarks>
 public sealed class ValueBlock
 {
+    private readonly int _placeCount;
     private object?[]? _made;
     private bool[]? _forgotten;
 
@@ -26,52 +36,65 @@ public sealed class ValueBlock
     /// </summary>
     /// <param name="shape">The shape of the record.</param>
     public ValueBlock(RecordShape shape)
+        : this(shape, shape.ByteSize == 0 ? [] : new byte[shape.ByteSize], shape.SlotCount == 0 ? [] : new VBTypedValue[shape.SlotCount], shape.PlaceCount)
+    {
+    }
+
+    // the block of the elements of an array, each one place of width bytes, all zero.
+    internal ValueBlock(int length, int width)
+        : this(null, length * width == 0 ? [] : new byte[length * width], [], length)
+    {
+    }
+
+    private ValueBlock(RecordShape? shape, byte[] bytes, VBTypedValue[] slots, int placeCount)
     {
         Shape = shape;
-        Bytes = shape.ByteSize == 0 ? [] : new byte[shape.ByteSize];
-        Slots = shape.SlotCount == 0 ? [] : new VBTypedValue[shape.SlotCount];
+        Bytes = bytes;
+        Slots = slots;
+        _placeCount = placeCount;
     }
 
     /// <summary>
-    /// The shape of the record the block holds.
+    /// The shape of the record the block holds; <see langword="null"/> for the block of an array's elements.
     /// </summary>
-    public RecordShape Shape { get; }
+    public RecordShape? Shape { get; }
 
     /// <summary>
-    /// The bytes of the record's bytes fields, little-endian, each at the offset its shape gives it.
+    /// The bytes of the record's bytes fields, or of the array's elements, little-endian, each at its offset.
     /// </summary>
     /// <remarks>
-    /// A caller that writes these bytes other than through a field's cell calls <see cref="Written"/> afterwards, so that each cell reads what was written.
+    /// A caller that writes these bytes other than through a field's or an element's cell calls <see cref="Written"/> afterwards, so that each cell reads
+    /// what was written.
     /// </remarks>
     public byte[] Bytes { get; }
 
     /// <summary>
-    /// The values of the record's reference fields, each in the slot its shape gives it.
+    /// The values of the record's reference fields, each in the slot its shape gives it; none in an array's block.
     /// </summary>
     public VBTypedValue[] Slots { get; }
 
     /// <summary>
-    /// How many times the bytes were written other than through a field's cell.
+    /// How many times the bytes were written other than through a field's or an element's cell.
     /// </summary>
     public int Version { get; private set; }
 
     /// <summary>
-    /// Says the bytes were written other than through a field's cell: each cell reads its field again.
+    /// Says the bytes were written other than through a field's or an element's cell: each cell reads its field or element again.
     /// </summary>
     public void Written() => Version++;
 
     /// <summary>
-    /// Whether the field at <paramref name="place"/> is known: a bytes field is, until its cell is told to forget it.
+    /// Whether the field or element at <paramref name="place"/> is known: a bytes field or an element is, until it is told to forget it.
     /// </summary>
-    /// <param name="place">The field's place in the block.</param>
-    /// <returns><see langword="false"/> when the field's value is not known.</returns>
+    /// <param name="place">The field's place in the block, or the element's flat index.</param>
+    /// <returns><see langword="false"/> when the value is not known.</returns>
     public bool IsKnown(int place) => _forgotten is null || !_forgotten[place];
 
     internal void Know(int place, bool isKnown)
     {
         if (!isKnown)
         {
-            (_forgotten ??= new bool[Shape.PlaceCount])[place] = true;
+            (_forgotten ??= new bool[_placeCount])[place] = true;
         }
         else if (_forgotten is not null)
         {
@@ -82,12 +105,44 @@ public sealed class ValueBlock
     // what is made of the fields, on first need: a block whose fields are not read one by one makes none of it.
     internal object? MadeAt(int place) => _made?[place];
 
-    internal void Keep(int place, object made) => (_made ??= new object?[Shape.PlaceCount])[place] = made;
+    internal void Keep(int place, object made) => (_made ??= new object?[_placeCount])[place] = made;
+
+    // a block of an array's elements that holds what this one holds, and knows what it knows; nothing made of it.
+    internal ValueBlock Copy()
+    {
+        var copy = new ValueBlock(Shape, [.. Bytes], Slots.Length == 0 ? [] : [.. Slots], _placeCount);
+        copy._forgotten = _forgotten is null ? null : [.. _forgotten];
+        return copy;
+    }
+
+    // the first places of an array's block, and their bytes, let what those of another hold: each cell reads its element again.
+    internal void LetFrom(ValueBlock source, int places, int width)
+    {
+        source.Bytes.AsSpan(0, places * width).CopyTo(Bytes);
+        for (var place = 0; place < places; place++)
+        {
+            Know(place, source.IsKnown(place));
+        }
+
+        Written();
+    }
+
+    // the first places of an array's block zero, and known: each cell reads its default again.
+    internal void Clear(int places, int width)
+    {
+        Array.Clear(Bytes, 0, places * width);
+        if (_forgotten is not null)
+        {
+            Array.Clear(_forgotten, 0, places);
+        }
+
+        Written();
+    }
 }
 
 /// <summary>
-/// The cell of a bytes field of a record: what the field holds is the bytes of its <see cref="ValueBlock"/> at the field's offset, which reading the cell
-/// decodes and writing it encodes.
+/// The cell of a bytes field of a record, or of an element of an array of a fixed-width type: what it holds is the bytes of its <see cref="ValueBlock"/> at its
+/// offset, which reading the cell decodes and writing it encodes.
 /// </summary>
 public sealed class BlockBytesCell : IKnowledgeBinding
 {
@@ -103,22 +158,22 @@ public sealed class BlockBytesCell : IKnowledgeBinding
     }
 
     /// <summary>
-    /// The block the field's bytes are in.
+    /// The block the field's or the element's bytes are in.
     /// </summary>
     public ValueBlock Block { get; }
 
     /// <summary>
-    /// The offset of the field's bytes in the block.
+    /// The offset of the field's or the element's bytes in the block.
     /// </summary>
     public int Offset { get; }
 
     /// <summary>
-    /// The field's place in the block.
+    /// The field's place in the block, or the element's flat index.
     /// </summary>
     public int Place { get; }
 
     /// <summary>
-    /// How the field's value is encoded.
+    /// How the value is encoded.
     /// </summary>
     public RecordFieldEncoding Encoding { get; }
 

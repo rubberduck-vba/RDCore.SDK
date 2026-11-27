@@ -1,5 +1,6 @@
 using RDCore.SDK.Model.Symbols.VBProject;
 using RDCore.SDK.Model.Types;
+using RDCore.SDK.Model.Types.Abstract;
 using RDCore.SDK.Model.Values.Runtime;
 using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
@@ -171,8 +172,11 @@ public sealed class RecordShape
         return new RecordShape(type, fields.MoveToImmutable(), bytes, slots, places);
     }
 
-    // a field is held as bytes when its type's default value is a number, a Boolean or a Date, whose runtime value is one the bytes encode.
-    private static RecordFieldEncoding EncodingOf(VBUserDefinedTypeFieldSymbol field) => field.ResolvedType?.DefaultValue switch
+    private static RecordFieldEncoding EncodingOf(VBUserDefinedTypeFieldSymbol field) => EncodingOf(field.ResolvedType);
+
+    // a field, or an element of an array, is held as bytes when its type's default value is a number, a Boolean or a Date, whose runtime value is one the
+    // bytes encode.
+    internal static RecordFieldEncoding EncodingOf(VBType? type) => type?.DefaultValue switch
     {
         (VBByteValue or VBIntegerValue or VBBooleanValue or VBLongValue or VBLongLongValue or VBLongPtrValue or VBSingleValue or VBDoubleValue
             or VBCurrencyValue or VBDateValue) and var value => EncodingOf(value.RuntimeValue),

@@ -80,8 +80,10 @@ public record class VBUserDefinedTypeValue : VBTypedValue,
     /// </summary>
     /// <param name="handle">The binding of the record.</param>
     /// <param name="block">The block of the record.</param>
+    /// <exception cref="ArgumentException"><paramref name="block"/> holds the elements of an array, which have no record shape.</exception>
     public VBUserDefinedTypeValue(IBindingHandle handle, ValueBlock block)
-        : this(handle, block, block.Shape, offset: 0, slot: 0, place: 0) { }
+        : this(handle, block, block.Shape ?? throw new ArgumentException("the block holds the elements of an array.", nameof(block)),
+            offset: 0, slot: 0, place: 0) { }
 
     // a view of block at the offsets of a record of shape: the record itself, or a record it nests.
     private VBUserDefinedTypeValue(IBindingHandle handle, ValueBlock block, RecordShape shape, int offset, int slot, int place)
