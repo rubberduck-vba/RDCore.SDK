@@ -462,9 +462,10 @@ public record class VBUserDefinedTypeValue : VBTypedValue,
     /// afterwards.
     /// </para>
     /// <para>
-    /// A <c>String</c> or an object a field held in its cell is written there, the source's value itself, which no write changes: a <c>String</c> or an
-    /// object reference is replaced, never written in place. A field that is replaced (a <c>Variant</c>, an array, or a value of another kind than the
-    /// field holds) is given a copy (<see cref="DataCopy"/>), as is the source of a fixed-size array field let element by element.
+    /// A <c>String</c> or object field held in a cell of its own has the source's value itself written in that cell: a <c>String</c> or an object
+    /// reference is replaced by a write, never changed in place, so the two records share no write. A field that is replaced (a <c>Variant</c>, an array,
+    /// or a value of another kind than the field holds) is given a copy that shares no cell with the source, as <see cref="DataCopy"/> makes, and so is
+    /// the source of a fixed-size array field let element by element.
     /// </para>
     /// </remarks>
     /// <param name="source">The record assigned, of this record's type.</param>

@@ -236,7 +236,7 @@ public sealed class RecordBlockTests
         Assert.AreEqual("a", nested.FieldAt(1)!.RuntimeValue.BoxedValue);
     }
 
-    // a record let a record that is no copy (the variable assigned, not the copy an assignment makes of it) takes a copy of it: a String is written in the
+    // a record let a record that is not a copy (the variable assigned, not the copy an assignment makes of it) takes a copy of it: a String is written in the
     // record's own cell, and a Variant is a copy of the source's, so a write to either afterwards is not the other's.
     [TestMethod]
     public void ARecordLetARecordThatIsNoCopy_SharesNoCellWithIt()
