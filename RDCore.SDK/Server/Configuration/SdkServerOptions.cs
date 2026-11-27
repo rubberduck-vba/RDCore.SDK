@@ -601,7 +601,8 @@ public record class SdkWorkspaceOptions
     /// <remarks>
     /// Off by default: in VBA and VB6 such a statement is a syntax error (<strong>MS-VBAL §5.1</strong>). A language whose files always have them has them
     /// whatever this says (<see cref="Workspace.SupportedLanguage.HasFileLevelStatements"/>), and so does a document of such a language in a workspace of
-    /// another (a <c>.vbs</c>): <see cref="AllowsFileLevelStatements"/> says which documents do.
+    /// another (a <c>.vbs</c>): <see cref="AllowsFileLevelStatements"/> says which documents do, and <see cref="AlwaysHasFileLevelStatements"/> which
+    /// have them whatever this says.
     /// </remarks>
     [Setting(SettingReach.NextStart)]
     public bool FileLevelStatements { get; set; }
@@ -615,8 +616,20 @@ public record class SdkWorkspaceOptions
     /// <returns><see langword="true"/> when its statements outside procedures are the module's own code.</returns>
     /// <exception cref="InvalidOperationException"><see cref="Language"/> is not the identifier of a language the platform serves.</exception>
     public bool AllowsFileLevelStatements(string document)
+        => FileLevelStatements ? Workspace.RDCoreDocument.FileOf(document).Length == document.Length : AlwaysHasFileLevelStatements(document);
+
+    /// <summary>
+    /// Whether a document has statements outside its procedures whatever <see cref="FileLevelStatements"/> says: its language always has them, or the
+    /// document is the source file of a language that always has them (<see cref="Workspace.SupportedLanguage.HasFileLevelStatements"/>), as a
+    /// <c>.vbs</c> is. Such a document is a script even when it writes no such statement. A module that a block of a file declares
+    /// (<see cref="Workspace.RDCoreDocument.BlockUri"/>) has none.
+    /// </summary>
+    /// <param name="document">The document's URI, or its path.</param>
+    /// <returns><see langword="true"/> when the document has them in a workspace with the setting off.</returns>
+    /// <exception cref="InvalidOperationException"><see cref="Language"/> is not the identifier of a language the platform serves.</exception>
+    public bool AlwaysHasFileLevelStatements(string document)
         => Workspace.RDCoreDocument.FileOf(document).Length == document.Length
-            && (FileLevelStatements || SupportedLanguage.HasFileLevelStatements
+            && (SupportedLanguage.HasFileLevelStatements
                 || Workspace.SupportedLanguages.All.Any(language => language.HasFileLevelStatements && language.IsSourceFile(document)));
 
     /// <summary>
