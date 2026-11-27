@@ -109,13 +109,13 @@ public readonly record struct PictureInfo(PictureFormat Format, int Width, int H
 public readonly record struct IconImage(int Width, int Height, int BitCount, int Offset, int Length)
 {
     /// <summary>
-    /// A cursor's image: the column of its hot spot, the pixel a pointer made from it points with, from its left edge, as its directory
-    /// entry states it. 0 for an icon's image, whose directory entry states no hot spot.
+    /// The column of the image's hot spot, in pixels from its left edge, as a cursor's directory entry states it. The hot spot is the pixel a
+    /// mouse pointer made from the image points with. 0 for an icon's image, whose directory entry states no hot spot.
     /// </summary>
     public int HotSpotX { get; init; }
 
     /// <summary>
-    /// A cursor's image: the row of its hot spot, from its top edge, as its directory entry states it. 0 for an icon's image.
+    /// The row of the image's hot spot, in pixels from its top edge, as a cursor's directory entry states it. 0 for an icon's image.
     /// </summary>
     public int HotSpotY { get; init; }
 }
