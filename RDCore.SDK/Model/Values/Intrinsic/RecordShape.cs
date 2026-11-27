@@ -7,7 +7,7 @@ using System.Runtime.CompilerServices;
 namespace RDCore.SDK.Model.Values.Intrinsic;
 
 /// <summary>
-/// Where each field of a record of a <see cref="VBUserDefinedType"/> is held in its <see cref="RecordBlock"/>: a field of a fixed-width intrinsic type as
+/// Where each field of a record of a <see cref="VBUserDefinedType"/> is held in its <see cref="ValueBlock"/>: a field of a fixed-width intrinsic type as
 /// bytes of the block, a nested record inline, as its own shape lays it out, and any other field in a reference slot of the block.
 /// </summary>
 /// <remarks>
@@ -210,7 +210,7 @@ public sealed class RecordShape
 }
 
 /// <summary>
-/// Where one field of a record is held in its <see cref="RecordBlock"/>.
+/// Where one field of a record is held in its <see cref="ValueBlock"/>.
 /// </summary>
 /// <param name="Symbol">The field.</param>
 /// <param name="Kind">Whether the field is bytes, a nested record or a reference slot.</param>

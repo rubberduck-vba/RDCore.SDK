@@ -16,7 +16,7 @@ namespace RDCore.SDK.Model.Values.Intrinsic;
 /// value is a <see cref="MemoryAddress"/>: a UDT has location identity and is never passed by value.
 /// </summary>
 /// <remarks>
-/// A record is a view of a <see cref="RecordBlock"/>, which holds its fields as its <see cref="RecordShape"/> lays them out: a field of a fixed-width
+/// A record is a view of a <see cref="ValueBlock"/>, which holds its fields as its <see cref="RecordShape"/> lays them out: a field of a fixed-width
 /// intrinsic type as bytes, a nested record inline, and any other field in a reference slot. A nested record is a view of the same block at the nested
 /// record's offsets. Declaration order is the order <strong>MS-VBAL §5.4.5.11</strong> writes a record in, and the order <see cref="VBUserDefinedTypeLayout"/>
 /// assigns offsets in, and a field's index in this type's members is its position in declaration order.
@@ -24,7 +24,7 @@ namespace RDCore.SDK.Model.Values.Intrinsic;
 public record class VBUserDefinedTypeValue : VBTypedValue,
     IVBTypedValue<VBUserDefinedTypeValue, MemoryAddress>
 {
-    private readonly RecordBlock _block;
+    private readonly ValueBlock _block;
     private readonly RecordShape _shape;
     private readonly int _offset;
     private readonly int _slot;
@@ -55,7 +55,7 @@ public record class VBUserDefinedTypeValue : VBTypedValue,
 
     // without defaults, each field starts as its type's default.
     private VBUserDefinedTypeValue(IBindingHandle handle, VBUserDefinedType typeInfo, IVariableDefaults? fieldDefaults)
-        : this(handle, new RecordBlock(RecordShape.Of(typeInfo)))
+        : this(handle, new ValueBlock(RecordShape.Of(typeInfo)))
     {
         Start(fieldDefaults);
     }
@@ -80,11 +80,11 @@ public record class VBUserDefinedTypeValue : VBTypedValue,
     /// </summary>
     /// <param name="handle">The binding of the record.</param>
     /// <param name="block">The block of the record.</param>
-    public VBUserDefinedTypeValue(IBindingHandle handle, RecordBlock block)
+    public VBUserDefinedTypeValue(IBindingHandle handle, ValueBlock block)
         : this(handle, block, block.Shape, offset: 0, slot: 0, place: 0) { }
 
     // a view of block at the offsets of a record of shape: the record itself, or a record it nests.
-    private VBUserDefinedTypeValue(IBindingHandle handle, RecordBlock block, RecordShape shape, int offset, int slot, int place)
+    private VBUserDefinedTypeValue(IBindingHandle handle, ValueBlock block, RecordShape shape, int offset, int slot, int place)
         : base(shape.Type)
     {
         Handle = handle;
@@ -103,7 +103,7 @@ public record class VBUserDefinedTypeValue : VBTypedValue,
     /// <summary>
     /// The block that holds this record's fields.
     /// </summary>
-    public RecordBlock Block => _block;
+    public ValueBlock Block => _block;
 
     /// <summary>
     /// The shape of this record, which says where each of its fields is in <see cref="Block"/>, relative to <see cref="ByteOffset"/>,
@@ -135,7 +135,7 @@ public record class VBUserDefinedTypeValue : VBTypedValue,
     /// </remarks>
     public VBUserDefinedTypeValue DataCopy()
     {
-        var copy = new VBUserDefinedTypeValue(InvalidBindingHandle.Default, new RecordBlock(_shape));
+        var copy = new VBUserDefinedTypeValue(InvalidBindingHandle.Default, new ValueBlock(_shape));
         copy.CopyFrom(this);
         return copy;
     }
@@ -211,7 +211,7 @@ public record class VBUserDefinedTypeValue : VBTypedValue,
     /// <remarks>
     /// <see cref="FieldAt"/> reads a field of a record that is not known as a value that is not known either, which is another binding. A caller
     /// that needs the cell itself (what the object a field holds is held by) reads it here. A field held as bytes is bound to its
-    /// <see cref="RecordBytesCell"/>, and a nested record is a view of this record's block; both are made on first need and kept.
+    /// <see cref="BlockBytesCell"/>, and a nested record is a view of this record's block; both are made on first need and kept.
     /// </remarks>
     /// <param name="index">The field's position in declaration order.</param>
     public VBTypedValue? StoredFieldAt(int index) => IsField(index) ? Stored(index) : null;
@@ -233,7 +233,7 @@ public record class VBUserDefinedTypeValue : VBTypedValue,
     /// </summary>
     /// <remarks>
     /// The field's bytes are read where the block holds them: no cell is made of the field, no view is made of a record it is in, and no value is boxed.
-    /// Whether the field is known is not read (<see cref="RecordBlock.IsKnown"/>).
+    /// Whether the field is known is not read (<see cref="ValueBlock.IsKnown"/>).
     /// </remarks>
     /// <param name="place">
     /// The field's place in the record (<see cref="RecordShape.PlaceOf"/>): its position in declaration order for a field of the record itself.
@@ -250,7 +250,7 @@ public record class VBUserDefinedTypeValue : VBTypedValue,
             return false;
         }
 
-        RecordBytesCell.Read(_block.Bytes.AsSpan(_offset + offset), encoding, out integral, out floating);
+        BlockBytesCell.Read(_block.Bytes.AsSpan(_offset + offset), encoding, out integral, out floating);
         return true;
     }
 
@@ -278,9 +278,9 @@ public record class VBUserDefinedTypeValue : VBTypedValue,
             return false;
         }
 
-        RecordBytesCell.Write(_block.Bytes.AsSpan(_offset + offset), encoding, integral, floating);
+        BlockBytesCell.Write(_block.Bytes.AsSpan(_offset + offset), encoding, integral, floating);
         var at = _place + place;
-        if (_block.MadeAt(at) is VBTypedValue { Handle: RecordBytesCell cell })
+        if (_block.MadeAt(at) is VBTypedValue { Handle: BlockBytesCell cell })
         {
             cell.Reread();
         }
@@ -301,7 +301,7 @@ public record class VBUserDefinedTypeValue : VBTypedValue,
             case RecordFieldKind.Bytes when _block.MadeAt(_place + field.Place) is VBTypedValue made:
                 return made;
             case RecordFieldKind.Bytes:
-                var cell = new RecordBytesCell(_block, _offset + field.Offset, _place + field.Place, field.Encoding);
+                var cell = new BlockBytesCell(_block, _offset + field.Offset, _place + field.Place, field.Encoding);
                 var value = (field.Symbol.ResolvedType?.DefaultValue ?? VBEmptyValue.Empty) with { Handle = cell };
                 _block.Keep(_place + field.Place, value);
                 return value;
@@ -407,13 +407,13 @@ public record class VBUserDefinedTypeValue : VBTypedValue,
     private void LetBytes(RecordShapeField field, VBTypedValue value)
     {
         var place = _place + field.Place;
-        if (_block.MadeAt(place) is VBTypedValue { Handle: RecordBytesCell cell })
+        if (_block.MadeAt(place) is VBTypedValue { Handle: BlockBytesCell cell })
         {
             cell.Store(value.RuntimeValue, isKnown: !value.IsIndeterminate);
             return;
         }
 
-        RecordBytesCell.Encode(value.RuntimeValue, _block.Bytes.AsSpan(_offset + field.Offset), field.Encoding);
+        BlockBytesCell.Encode(value.RuntimeValue, _block.Bytes.AsSpan(_offset + field.Offset), field.Encoding);
         _block.Know(place, isKnown: !value.IsIndeterminate);
     }
 

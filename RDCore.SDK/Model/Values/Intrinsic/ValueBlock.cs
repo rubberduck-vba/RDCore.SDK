@@ -16,7 +16,7 @@ namespace RDCore.SDK.Model.Values.Intrinsic;
 /// A field's cell, the binding a <c>ByRef</c> parameter given the field is bound to (<strong>MS-VBAL §5.3.1.11</strong>), and the view of a nested record are
 /// made on first need and kept in the block for its life, so that every parameter given one field shares one cell.
 /// </remarks>
-public sealed class RecordBlock
+public sealed class ValueBlock
 {
     private object?[]? _made;
     private bool[]? _forgotten;
@@ -25,7 +25,7 @@ public sealed class RecordBlock
     /// A block for a record of <paramref name="shape"/>, its bytes zero and its slots empty.
     /// </summary>
     /// <param name="shape">The shape of the record.</param>
-    public RecordBlock(RecordShape shape)
+    public ValueBlock(RecordShape shape)
     {
         Shape = shape;
         Bytes = shape.ByteSize == 0 ? [] : new byte[shape.ByteSize];
@@ -86,15 +86,15 @@ public sealed class RecordBlock
 }
 
 /// <summary>
-/// The cell of a bytes field of a record: what the field holds is the bytes of its <see cref="RecordBlock"/> at the field's offset, which reading the cell
+/// The cell of a bytes field of a record: what the field holds is the bytes of its <see cref="ValueBlock"/> at the field's offset, which reading the cell
 /// decodes and writing it encodes.
 /// </summary>
-public sealed class RecordBytesCell : IKnowledgeBinding
+public sealed class BlockBytesCell : IKnowledgeBinding
 {
     private IRuntimeValue? _read;
     private int _readVersion;
 
-    internal RecordBytesCell(RecordBlock block, int offset, int place, RecordFieldEncoding encoding)
+    internal BlockBytesCell(ValueBlock block, int offset, int place, RecordFieldEncoding encoding)
     {
         Block = block;
         Offset = offset;
@@ -105,7 +105,7 @@ public sealed class RecordBytesCell : IKnowledgeBinding
     /// <summary>
     /// The block the field's bytes are in.
     /// </summary>
-    public RecordBlock Block { get; }
+    public ValueBlock Block { get; }
 
     /// <summary>
     /// The offset of the field's bytes in the block.

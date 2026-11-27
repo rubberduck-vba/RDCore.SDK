@@ -11,12 +11,12 @@ using RDCore.SDK.Model.Values.Intrinsic;
 namespace RDCore.Tests.Model.Values;
 
 /// <summary>
-/// A record as a view of its <see cref="RecordBlock"/>: fields of fixed-width intrinsic types held as bytes, a nested record inline, any other field in a
+/// A record as a view of its <see cref="ValueBlock"/>: fields of fixed-width intrinsic types held as bytes, a nested record inline, any other field in a
 /// reference slot (<see cref="RecordShape"/>), and the record's semantics kept over them: a field's cell is one cell, a <c>with</c> copy is another view of
 /// the record, and the copy an assignment makes shares nothing (<strong>MS-VBAL §5.4.3.8</strong>).
 /// </summary>
 [TestClass]
-public sealed class RecordBlockTests
+public sealed class ValueBlockTests
 {
     private static VBUserDefinedType Udt(string name, params (string Name, VBType Type)[] fields)
     {
