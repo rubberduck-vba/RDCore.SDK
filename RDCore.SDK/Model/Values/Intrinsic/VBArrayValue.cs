@@ -827,8 +827,9 @@ public abstract record class VBArrayValue : VBTypedValue
         private IBindingHandle?[]? _made;
         private ValueBlock? _block;
 
-        // the shape of an element that is a record, and the record each starts as; null for an element of another type, which costs the array nothing.
-        private RecordStart? _records = itemType is VBUserDefinedType record ? new RecordStart(RecordShape.Of(record)) : null;
+        // what makes an element beyond its type's default: the shape of an element that is a record and the record each starts as, or else elementCell,
+        // which an array of records is never given. One field for either, so that an array of another type pays nothing for records.
+        private object? _making = itemType is VBUserDefinedType record ? new RecordStart(RecordShape.Of(record)) : elementCell;
 
         // how an element is held as bytes; None for an element held in a cell, as an element that something other than its type's default starts as is.
         public RecordFieldEncoding Encoding { get; } = elementDefault is null ? RecordShape.EncodingOf(itemType) : RecordFieldEncoding.None;
@@ -838,7 +839,7 @@ public abstract record class VBArrayValue : VBTypedValue
         public bool IsBytes => Encoding != RecordFieldEncoding.None;
 
         // the shape of an element that is a record; null for an element of another type.
-        public RecordShape? Records => _records?.Shape;
+        public RecordShape? Records => (_making as RecordStart)?.Shape;
 
         // the block of the elements held as bytes, or of the records, made on first need: an array none of whose elements is written holds zero bytes, each
         // known.
@@ -865,7 +866,7 @@ public abstract record class VBArrayValue : VBTypedValue
 
                 cell = made[index] = Records is { } shape
                     ? RecordCell(RecordAt(index, shape), isKnown: true)
-                    : elementCell?.Invoke() ?? CreateDefaultCell(itemType);
+                    : (_making as Func<IBindingHandle>)?.Invoke() ?? CreateDefaultCell(itemType);
                 if (Unmade.IsForgotten && IsForgotten(cell, Unmade.UnlessHolding) && cell is IKnowledgeBinding known)
                 {
                     known.Forget();
@@ -879,7 +880,7 @@ public abstract record class VBArrayValue : VBTypedValue
         // element type's, which a start of a type equal by its declarations would be, is a record of its own.
         private VBUserDefinedTypeValue RecordAt(int index, RecordShape shape)
         {
-            var start = _records!.StartOf(elementDefault);
+            var start = ((RecordStart)_making!).StartOf(elementDefault);
             return start is null || ReferenceEquals(start.Shape, shape)
                 ? VBUserDefinedTypeValue.ElementOf(Block, shape, index, start)
                 : (VBUserDefinedTypeValue)elementDefault!.Invoke();
@@ -907,7 +908,7 @@ public abstract record class VBArrayValue : VBTypedValue
         public void BlockFrom(ValueBlock? block) => _block = block?.Copy();
 
         // a store of the same length and element type, none of whose cells is made, which knows of its elements what this one knows of those not made.
-        public ElementStore Fresh() => new(length, itemType, elementDefault, elementCell) { Unmade = Unmade, _records = _records };
+        public ElementStore Fresh() => new(length, itemType, elementDefault, _making as Func<IBindingHandle>) { Unmade = Unmade, _making = _making };
     }
 
     // the shape of an array's records, and the record each of them starts as (elementDefault), made once, when the first element is: an array's copies
