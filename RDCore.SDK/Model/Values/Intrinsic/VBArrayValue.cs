@@ -31,6 +31,11 @@ namespace RDCore.SDK.Model.Values.Intrinsic;
 /// same order. An element's cell is a <see cref="BlockBytesCell"/> of the block, made when the element is read or given to a caller and kept: an element
 /// written by <see cref="TryWriteElementAt"/>, copied, let, reset or preserved makes none.
 /// </para>
+/// <para>
+/// The elements of an array of a user-defined type are records of one <see cref="ValueBlock"/>, laid end to end in the same order. An element's cell holds a
+/// view of the block at the element's offsets (<see cref="VBUserDefinedTypeValue"/>), made as other cells are and kept, and a copy of the array
+/// (<see cref="DataCopy"/>) copies each record into the copy's block.
+/// </para>
 /// </remarks>
 public abstract record class VBArrayValue : VBTypedValue
 {
@@ -128,7 +133,7 @@ public abstract record class VBArrayValue : VBTypedValue
         {
             if (MadeCell(index) is { } cell)
             {
-                copy._store.Adopt(index, DataValues.CopyCell(cell));
+                copy._store.AdoptCopyOf(index, cell);
             }
         }
 
@@ -815,11 +820,16 @@ public abstract record class VBArrayValue : VBTypedValue
 
     // the cells of an array and of the views a `with` makes of it, each made the first time it is needed, as the array's constructor was told to make
     // it: by elementCell where it was given one, holding the element type's default value. The elements of a fixed-width intrinsic type are bytes of one
-    // block instead, made on the first write, and a cell of one of them is the cell of its bytes.
+    // block instead, made on the first write, and a cell of one of them is the cell of its bytes. The elements that are records are records of one block
+    // too, laid end to end, each a view of the block in a cell of its own.
     private sealed class ElementStore(int length, VBType itemType, Func<VBTypedValue>? elementDefault, Func<IBindingHandle>? elementCell)
     {
         private IBindingHandle?[]? _made;
         private ValueBlock? _block;
+
+        // the record each element that is a record starts as (elementDefault), made once, when the first element is.
+        private VBUserDefinedTypeValue? _start;
+        private bool _isStartMade;
 
         // how an element is held as bytes; None for an element held in a cell, as an element that something other than its type's default starts as is.
         public RecordFieldEncoding Encoding { get; } = elementDefault is null ? RecordShape.EncodingOf(itemType) : RecordFieldEncoding.None;
@@ -828,8 +838,12 @@ public abstract record class VBArrayValue : VBTypedValue
 
         public bool IsBytes => Encoding != RecordFieldEncoding.None;
 
-        // the block of the elements held as bytes, made on first need: an array none of whose elements is written holds zero bytes, each known.
-        public ValueBlock Block => _block ??= new ValueBlock(length, Width);
+        // the shape of an element that is a record; null for an element of another type.
+        public RecordShape? Records { get; } = itemType is VBUserDefinedType record ? RecordShape.Of(record) : null;
+
+        // the block of the elements held as bytes, or of the records, made on first need: an array none of whose elements is written holds zero bytes, each
+        // known.
+        public ValueBlock Block => _block ??= Records is { } shape ? new ValueBlock(shape, length) : new ValueBlock(length, Width);
 
         public ValueBlock? BlockOrNone => _block;
 
@@ -850,7 +864,9 @@ public abstract record class VBArrayValue : VBTypedValue
                     return made[index] = new BlockBytesCell(Block, index * Width, index, Encoding);
                 }
 
-                cell = made[index] = elementCell?.Invoke() ?? CreateDefaultCell(itemType, elementDefault);
+                cell = made[index] = Records is { } shape
+                    ? RecordCell(RecordAt(index, shape), isKnown: true)
+                    : elementCell?.Invoke() ?? CreateDefaultCell(itemType);
                 if (Unmade.IsForgotten && IsForgotten(cell, Unmade.UnlessHolding) && cell is IKnowledgeBinding known)
                 {
                     known.Forget();
@@ -860,14 +876,43 @@ public abstract record class VBArrayValue : VBTypedValue
             return cell;
         }
 
+        // the record at an index, a view of the block, its fields as those of the record each element starts as. A record of another shape than the
+        // element type's, which a start of a type equal by its declarations would be, is a record of its own.
+        private VBUserDefinedTypeValue RecordAt(int index, RecordShape shape)
+        {
+            if (!_isStartMade)
+            {
+                (_start, _isStartMade) = (elementDefault?.Invoke() as VBUserDefinedTypeValue, true);
+            }
+
+            return _start is null || ReferenceEquals(_start.Shape, shape)
+                ? VBUserDefinedTypeValue.ElementOf(Block, shape, index, _start)
+                : (VBUserDefinedTypeValue)elementDefault!.Invoke();
+        }
+
+        // an element that is a record is boxed as a variable stores one: its fields are written where they are, which an element built again at each read
+        // would lose.
+        private static ValueBindingHandle RecordCell(VBUserDefinedTypeValue record, bool isKnown)
+            => BindingKnowledge.NewCell(new VBRuntimeValue<VBRuntimeUserDefinedTypeValue>(new VBRuntimeUserDefinedTypeValue(record)), isKnown);
+
         // keeps a cell made elsewhere as the one at an index: the copy of an element of another array.
         public void Adopt(int index, IBindingHandle cell) => (_made ??= new IBindingHandle?[length])[index] = cell;
+
+        // keeps a copy of the cell of another array's element as the one at an index, as DataValues.CopyCell makes it: a record of the source's shape is
+        // copied into this store's block.
+        public void AdoptCopyOf(int index, IBindingHandle cell)
+            => Adopt(index, Records is { } shape && cell is IKnowledgeBinding { IsKnown: var isKnown } and not ICopyableBinding
+                && cell.BindingCapabilities.HasFlag(BindingCapabilities.GetValue)
+                && cell.Value is VBRuntimeValue<VBRuntimeUserDefinedTypeValue> { StoredValue.UserDefinedType: { } record }
+                && ReferenceEquals(record.Shape, shape)
+                    ? RecordCell(VBUserDefinedTypeValue.ElementCopyOf(Block, index, record), isKnown)
+                    : DataValues.CopyCell(cell));
 
         // the elements held as bytes become a copy of another block's, which no cell is made of yet.
         public void BlockFrom(ValueBlock? block) => _block = block?.Copy();
 
         // a store of the same length and element type, none of whose cells is made, which knows of its elements what this one knows of those not made.
-        public ElementStore Fresh() => new(length, itemType, elementDefault, elementCell) { Unmade = Unmade };
+        public ElementStore Fresh() => new(length, itemType, elementDefault, elementCell) { Unmade = Unmade, _start = _start, _isStartMade = _isStartMade };
     }
 
     // what is known of the elements whose cells are not made, all of which hold the same default value: each is known, or each is forgotten as
@@ -885,17 +930,10 @@ public abstract record class VBArrayValue : VBTypedValue
         };
     }
 
-    // A fresh binding per cell so an element write never aliases another cell. An element that is a record is a record of its own,
-    // boxed as a variable stores one: its fields are written where they are, which an element built again at each read would lose. Other
-    // complex element types (Variant, Object) whose default value has no readable binding get an inert cell, which a write replaces.
-    private static IBindingHandle CreateDefaultCell(VBType itemType, Func<VBTypedValue>? elementDefault)
+    // A fresh binding per cell so an element write never aliases another cell. Complex element types (Variant, Object) whose default value has no
+    // readable binding get an inert cell, which a write replaces.
+    private static IBindingHandle CreateDefaultCell(VBType itemType)
     {
-        if (itemType is VBUserDefinedType record)
-        {
-            var element = elementDefault?.Invoke() as VBUserDefinedTypeValue ?? new VBUserDefinedTypeValue(record);
-            return BindingKnowledge.NewCell(new VBRuntimeValue<VBRuntimeUserDefinedTypeValue>(new VBRuntimeUserDefinedTypeValue(element)), isKnown: true);
-        }
-
         var defaultValue = itemType.DefaultValue;
         return defaultValue.Handle.BindingCapabilities.HasFlag(BindingCapabilities.GetValue)
             ? new ValueBindingHandle(defaultValue.RuntimeValue)
