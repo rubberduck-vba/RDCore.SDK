@@ -95,7 +95,7 @@ public sealed class RecordShape
     /// </summary>
     /// <remarks>
     /// A field of the record itself is at the place of its position. A place does not depend on the pointer width, so a place found when code is compiled
-    /// holds when it runs; the offset of a field's bytes does (a <c>LongPtr</c> field before it).
+    /// holds when it runs. The offset of a field's bytes can depend on it, when a <c>LongPtr</c> field comes before the field.
     /// </remarks>
     /// <param name="path">The position of the field at each level, the outermost first.</param>
     /// <returns>
