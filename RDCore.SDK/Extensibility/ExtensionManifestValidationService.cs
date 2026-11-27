@@ -2,7 +2,6 @@
 using RDCore.SDK.Platform;
 using RDCore.SDK.Server.Configuration;
 using System.IO.Abstractions;
-using System.Reflection;
 using System.Security.Cryptography;
 
 namespace RDCore.SDK.Extensibility;
@@ -114,12 +113,9 @@ public class ExtensionManifestValidationService(IOptions<SdkAppOptions> options,
     /// </summary>
     /// <remarks>
     /// It is RDCore.SDK's version, which an extension's assembly references, and not RDCore.SDK.Protocols' (<see cref="RDCoreSdk.Version"/>):
-    /// the two packages are versioned apart. It is read from the assembly's informational version, or from its numeric version when it has none.
+    /// the two packages are versioned apart. It is read as any RDCore package's assembly is (<see cref="RDCoreSdk.VersionOf"/>).
     /// </remarks>
-    public static PlatformVersion SdkVersion { get; } = typeof(ExtensionInfo).Assembly is var sdk
-        && PlatformVersion.TryParse(sdk.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion, out var stamped)
-            ? stamped
-            : PlatformVersionJsonConverter.Of(sdk.GetName().Version ?? new Version(0, 0, 0));
+    public static PlatformVersion SdkVersion { get; } = RDCoreSdk.VersionOf(typeof(ExtensionInfo).Assembly);
 
     /// <summary>
     /// Validates the specified <see cref="ExtensionInfo"/>.
