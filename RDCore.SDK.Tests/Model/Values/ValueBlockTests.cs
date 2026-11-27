@@ -155,7 +155,7 @@ public sealed class ValueBlockTests
     // a field of the record itself is at the place of its position; a path that names no field has no place, and a place that is not a bytes field of the
     // encoding expected is neither read nor written.
     [TestMethod]
-    public void APathThatNamesNoField_HasNoPlace_AndAPlaceThatIsNoBytesField_IsNotReadOrWritten()
+    public void APathThatNamesNoField_HasNoPlace_AndAPlaceThatIsNotABytesField_IsNotReadOrWritten()
     {
         var outer = new VBUserDefinedTypeValue(Nesting());
         var shape = outer.Shape;
