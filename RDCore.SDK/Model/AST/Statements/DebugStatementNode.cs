@@ -22,8 +22,8 @@ namespace RDCore.SDK.Model.AST.Statements;
 /// symbol is synthesized to match: see <c>StdLibSymbolProvider</c>.
 /// </para>
 /// <para>
-/// The names are each at a range of their own (<see cref="ObjectRange"/>, <see cref="MemberRange"/>), as the parse wrote them: what a hover or a
-/// go-to-definition on <c>Debug</c> or on its member binds, without reading the source text again.
+/// The node keeps where each name is written (<see cref="ObjectRange"/>, <see cref="MemberRange"/>), so that a hover or a go-to-definition on
+/// <c>Debug</c> or on its member binds it without reading the source text again.
 /// </para>
 /// </remarks>
 /// <param name="Identity">A unique identifier for this specific syntax node.</param>
