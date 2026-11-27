@@ -349,7 +349,7 @@ public record class VBUserDefinedTypeValue : VBTypedValue,
                 _block.Slots[_slot + field.Slot] = value;
                 return true;
             case RecordFieldKind.Bytes:
-                ((IKnowledgeBinding)Stored(index).Handle).Store(value.RuntimeValue, isKnown: !value.IsIndeterminate);
+                LetBytes(field, value);
                 return true;
             default:
                 return value is VBUserDefinedTypeValue record && ((VBUserDefinedTypeValue)Stored(index)).TryLetRecord(record);
@@ -393,7 +393,7 @@ public record class VBUserDefinedTypeValue : VBTypedValue,
         switch (field.Kind)
         {
             case RecordFieldKind.Bytes:
-                ((IKnowledgeBinding)Stored(index).Handle).Store(value.RuntimeValue, isKnown: !value.IsIndeterminate);
+                LetBytes(field, value);
                 return true;
             case RecordFieldKind.Nested:
                 return value is VBUserDefinedTypeValue record && ((VBUserDefinedTypeValue)Stored(index)).TryLetRecord(record);
@@ -401,6 +401,21 @@ public record class VBUserDefinedTypeValue : VBTypedValue,
                 LetSlot(_slot + field.Slot, value);
                 return true;
         }
+    }
+
+    // a bytes field let a value of its type: in its cell when one was made of it, which then reads the value let, and in the field's bytes otherwise,
+    // which a cell made later reads.
+    private void LetBytes(RecordShapeField field, VBTypedValue value)
+    {
+        var place = _place + field.Place;
+        if (_block.MadeAt(place) is VBTypedValue { Handle: RecordBytesCell cell })
+        {
+            cell.Store(value.RuntimeValue, isKnown: !value.IsIndeterminate);
+            return;
+        }
+
+        RecordBytesCell.Encode(value.RuntimeValue, _block.Bytes.AsSpan(_offset + field.Offset), field.Encoding);
+        _block.Know(place, isKnown: !value.IsIndeterminate);
     }
 
     // a reference field let value: written in its cell, element by element, or replaced, as TryLetFieldAt says.
