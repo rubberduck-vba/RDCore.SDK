@@ -233,6 +233,16 @@ public record class SdkAppOptions
     /// A change takes effect with the next hints a client asks for, while the platform runs.
     /// </remarks>
     public SdkInlayHintOptions InlayHints { get; set; } = new();
+
+    /// <summary>
+    /// The audit log: what it records of a call's arguments, and where its entries go (<see cref="Auditing.IAuditLog"/>).
+    /// </summary>
+    /// <remarks>
+    /// Only the platform's settings file sets it (<see cref="SettingReach.Platform"/>): where the audit goes, and what it records, is the administrator's
+    /// alone. Which calls it records, the execution policy says (<see cref="SdkEnvironmentOptions.ExecutionPolicy"/>).
+    /// </remarks>
+    [Setting(SettingReach.Platform)]
+    public SdkAuditOptions Audit { get; set; } = new();
 }
 
 /// <summary>
@@ -331,6 +341,24 @@ public record class SdkEnvironmentOptions
     /// </remarks>
     [TrustSensitiveSetting]
     public bool AllowAutomation { get; set; } = true;
+
+    /// <summary>
+    /// The execution policy: for each category of call that reaches outside the program, whether it is made, refused with an error a handler can trap, or
+    /// refused with the program stopped, and which of the calls the audit log records (<see cref="Runtime.ExecutionPolicy"/>). Every call is made and none is
+    /// recorded by default.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Only the platform's settings file sets it (<see cref="SettingReach.Platform"/>): neither a component's own configuration, a user's settings, a
+    /// workspace's, an environment variable nor the command line changes it.
+    /// </para>
+    /// <para>
+    /// Where <see cref="AllowDllImports"/> or <see cref="AllowAutomation"/> is <c>false</c>, the rule of its category is at least
+    /// <c>Block</c> (<see cref="Runtime.ExecutionPolicy.Allowing"/>).
+    /// </para>
+    /// </remarks>
+    [Setting(SettingReach.Platform)]
+    public SdkExecutionPolicyOptions ExecutionPolicy { get; set; } = new();
 
     /// <summary>
     /// 🎯 Whether <c>SaveSetting</c>, <c>GetSetting</c>, <c>GetAllSettings</c> and <c>DeleteSetting</c> use the <em>Windows Registry</em>
