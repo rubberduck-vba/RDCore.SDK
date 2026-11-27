@@ -28,8 +28,9 @@ namespace RDCore.SDK.Model.Values.Intrinsic;
 /// </para>
 /// <para>
 /// The elements of an array of a fixed-width intrinsic type (<see cref="ElementEncoding"/>) are bytes of one <see cref="ValueBlock"/>, side by side in the
-/// same order. An element's cell is a <see cref="BlockBytesCell"/> of the block, made when the element is read or given to a caller and kept: an element
-/// written by <see cref="TryWriteElementAt"/>, copied, let, reset or preserved makes none.
+/// same order. An element's cell is a <see cref="BlockBytesCell"/> of the block, made when the element is read or given to a caller and kept. Writing an
+/// element (<see cref="TryWriteElementAt"/>, <see cref="TryLetElementAt"/>, <see cref="TrySetElementAt"/>) makes none, nor does copying, letting,
+/// resetting, forgetting or preserving the array.
 /// </para>
 /// </remarks>
 public abstract record class VBArrayValue : VBTypedValue
@@ -104,7 +105,8 @@ public abstract record class VBArrayValue : VBTypedValue
     /// </summary>
     /// <remarks>
     /// Each element is a copy in a cell of its own, deep through what a <c>Variant</c> element holds, and the copy is bound to no storage: it is
-    /// whichever variable it is assigned to that gives it an address.
+    /// whichever variable it is assigned to that gives it an address. Elements held as bytes (<see cref="ElementEncoding"/>) are a copy of the bytes, and
+    /// of what is known of them, with no cell made.
     /// </remarks>
     public VBArrayValue DataCopy()
     {
@@ -252,7 +254,8 @@ public abstract record class VBArrayValue : VBTypedValue
     /// </summary>
     /// <remarks>
     /// An element whose cell cannot be written, one never assigned, is given the cell of <paramref name="value"/> instead, which must share no cell with
-    /// anything else.
+    /// anything else. An element held as bytes (<see cref="ElementEncoding"/>) is written what <paramref name="value"/> holds, where it is, and no cell is
+    /// made of it.
     /// </remarks>
     /// <param name="flatIndex">From 0 to <see cref="Length"/> - 1.</param>
     /// <param name="value">The value to assign, of the array's element type.</param>
