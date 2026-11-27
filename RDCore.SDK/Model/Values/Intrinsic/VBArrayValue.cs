@@ -709,13 +709,14 @@ public abstract record class VBArrayValue : VBTypedValue
     }
 
     /// <summary>
-    /// Rebinds the element at the given subscripts to <paramref name="value"/>. Mutates the cell in
-    /// place — array element storage is mutable. Returns <c>false</c> when the subscripts are out of
-    /// bounds or their count does not match the array rank.
+    /// Rebinds the element at the given subscripts to <paramref name="value"/>, in place: array element storage is mutable.
     /// </summary>
     /// <remarks>
     /// An element held as bytes (<see cref="ElementEncoding"/>) is written what <paramref name="value"/> holds, as <see cref="TrySetElementAt"/> writes it.
     /// </remarks>
+    /// <param name="value">The element's new binding.</param>
+    /// <param name="subscripts">One subscript per dimension of the array.</param>
+    /// <returns><c>false</c> when the subscripts are out of bounds or their count does not match the array's rank.</returns>
     public bool TrySetElement(IBindingHandle value, params int[] subscripts)
     {
         var index = LinearIndex(subscripts);
