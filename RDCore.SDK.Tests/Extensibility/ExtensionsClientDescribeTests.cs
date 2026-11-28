@@ -92,7 +92,7 @@ public sealed class ExtensionsClientDescribeTests
         Assert.AreEqual(Title, info.Title);
     }
 
-    // an executable in a folder that is not one of the extensions folder's is no extension of the platform, whatever the working directory is: here, the
+    // an executable in a folder that is not one of the extensions folder's is not an extension of the platform, whatever the working directory is: here, the
     // extension's own folder.
     [TestMethod]
     public void AnExecutableOutsideTheExtensionsFolder_IsNotDescribed()
